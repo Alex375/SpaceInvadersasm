@@ -193,34 +193,41 @@ FillScreen          ; Sauvegarde les registres dans la pile.
 					movem.l (a7)+,d7/a0
 					rts
 					
-Main                lea     InvaderA_Bitmap,a0
-                    lea     VIDEO_START+14+100*BYTE_PER_LINE,a1
-                    jsr     CopyBitmap
+; Main                lea     InvaderA_Bitmap,a0
+;                     lea     VIDEO_START+14+100*BYTE_PER_LINE,a1
+;                     jsr     CopyBitmap
 
-                    lea     InvaderB_Bitmap,a0
-                    lea     VIDEO_START+28+100*BYTE_PER_LINE,a1
-                    jsr     CopyBitmap
+;                     lea     InvaderB_Bitmap,a0
+;                     lea     VIDEO_START+28+100*BYTE_PER_LINE,a1
+;                     jsr     CopyBitmap
 
-                    lea     InvaderC_Bitmap,a0
-                    lea     VIDEO_START+42+100*BYTE_PER_LINE,a1
-                    jsr     CopyBitmap
+;                     lea     InvaderC_Bitmap,a0
+;                     lea     VIDEO_START+42+100*BYTE_PER_LINE,a1
+;                     jsr     CopyBitmap
 
-                    lea     Ship_Bitmap,a0
-                    lea     VIDEO_START+28+200*BYTE_PER_LINE,a1
-                    jsr     CopyBitmap
+;                     lea     Ship_Bitmap,a0
+;                     lea     VIDEO_START+28+200*BYTE_PER_LINE,a1
+;                     jsr     CopyBitmap
 
-					; Test 1
-					move.l  #$ffffffff,d0
-					jsr     FillScreen
-					; Test 2
-					move.l #$f0f0f0f0,d0
-					jsr     FillScreen; Test 3
-					move.l #$fff0fff0,d0
-					jsr     FillScreen 
-					; Test 4
-					moveq.l #$0,d0
-					jsr     FillScreen
-					illegal
+; 					; Test 1
+; 					move.l  #$ffffffff,d0
+; 					jsr     FillScreen
+; 					; Test 2
+; 					move.l #$f0f0f0f0,d0
+; 					jsr     FillScreen; Test 3
+; 					move.l #$fff0fff0,d0
+; 					jsr     FillScreen 
+; 					; Test 4
+; 					moveq.l #$0,d0
+; 					jsr     FillScreen
+; 					illegal
+\loop
+                    move.w  #2,d0
+                    jsr     WhiteSquare
+                    addq.w  #2,d0
+                    cmpi.w  #40,d0
+                    bls     \loop
+                    illegal
 
 
 HLines              ; Sauvegarde les registres dans la pile.
@@ -288,7 +295,8 @@ WhiteSquare32       ; Sauvegarde les registres dans la pile.
                     ; = VIDEO_START + (Déplacement horizontal) + (Déplacement vertical) 
                     lea VIDEO_START+((BYTE_PER_LINE-4)/2)+(((VIDEO_HEIGHT-32)/2)*BYTE_PER_LINE),a0
                     ; Initialisation du compteur de boucle (D7.W).
-                    ; Nombre d'itérations = Nombre de lignes du carré (32). ; D7.W = Nombre d'itération - 1 (car DBRA).
+                    ; Nombre d'itérations = Nombre de lignes du carré (32). 
+                    ; D7.W = Nombre d'itération - 1 (car DBRA).
                     move.w #32-1,d7
 \loop               ; Copie 32 pixels blancs dans la mémoire vidéo 
                     ; et passe à l'adresse suivante.
@@ -329,10 +337,10 @@ WhiteSquare128      ; Sauvegarde les registres dans la pile.
 \loop               ; Copie 128 pixels blancs dans la mémoire vidéo ; et passe à l'adresse suivante.
                     move.l #$ffffffff,(a0)
                     move.l #$ffffffff,4(a0)
-                    move.l  #$ffffffff,8(a0)
-                    move.l  #$ffffffff,12(a0)
-                    adda.l  #BYTE_PER_LINE,a0
-                    dbra    d7,\loop
+                    move.l #$ffffffff,8(a0)
+                    move.l #$ffffffff,12(a0)
+                    adda.l #BYTE_PER_LINE,a0
+                    dbra   d7,\loop
                     ; Restaure les registres puis sortie.
                     movem.l (a7)+,d7/a0
                     rts
@@ -340,7 +348,8 @@ WhiteSquare128      ; Sauvegarde les registres dans la pile.
 
 WhiteLine           ; Sauvegarde les registres dans la pile.
                     movem.l d0/a0,-(a7)
-                    ; Nombre d'itérations = Taille de la ligne en octets ; D0.W = Nombre d'itérations - 1 (car DBRA)
+                    ; Nombre d'itérations = Taille de la ligne en octets 
+                    ; D0.W = Nombre d'itérations - 1 (car DBRA)
                     subq.w #1,d0
 
 \loop               ; Copie 8 pixels blancs et passe à l'adresse suivante.
@@ -359,7 +368,8 @@ WhiteSquare         ; Sauvegarde les registres dans la pile.
                     ; Fait pointer A0 sur la mémoire vidéo.
                     lea     VIDEO_START,a0
                     ; Centre horizontalement.
-                    ; A0 + (Largeur totale - largeur carré) / 2 move.w #BYTE_PER_LINE,d1
+                    ; A0 + (Largeur totale - largeur carré) / 2 
+                    move.w #BYTE_PER_LINE,d1
                     sub.w d0,d1
                     lsr.w #1,d1
                     adda.w d1,a0
@@ -370,7 +380,8 @@ WhiteSquare         ; Sauvegarde les registres dans la pile.
                     mulu.w #BYTE_PER_LINE,d1
                     adda.w d1,a0
                     ; Nombre d'itérations = Taille en pixels
-                    ; D2.W = Nombre d'itérations - 1 (car DBRA) subq.w #1,d2
+                    ; D2.W = Nombre d'itérations - 1 (car DBRA) 
+                    subq.w #1,d2
 
 
 \loop               ; Affiche la ligne en cours et passe à la ligne suivante.
