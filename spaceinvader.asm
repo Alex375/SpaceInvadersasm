@@ -221,9 +221,43 @@ Main                lea     InvaderA_Bitmap,a0
 					moveq.l #$0,d0
 					jsr     FillScreen
 					illegal
-					
-					
-					
-					
-					
-					
+
+
+HLines              ; Sauvegarde les registres dans la pile.
+                    movem.l d6/d7/a0,-(a7)
+                    ; Fait pointer A0 sur la mémoire vidéo.
+                    lea     VIDEO_START,a0
+                    ; D7.W = Compteur de boucle
+                    ; = Nombre d'itérations - 1 (car DBRA).
+                    ; ------------------------------
+                    ; Nombre d'itérations = Nombre de rayures blanches et noires
+                    ; Hauteur d'un rayure blanche = 8 pixels
+                    ; Hauteur d'un rayure noire = 8 pixels
+                    ; Nombre de rayures blanches et noires = Hauteur de la fenêtre / 2x8 
+                    move.l #VIDEO_HEIGHT/16-1,d7
+
+\loop               ; Dessine une rayure blanche (8 lignes blanches).
+                    ; ------------------------------
+                    ; D6.W = Compteur de boucles
+                    ;      = Nombre d'itérations - 1 (car DBRA)
+                    ; ------------------------------
+                    ; Nombre d'itérations = Nombre de mots longs
+                    ; Nombre de mots longs = Nombre d'octets / 4
+                    ; Nombre d'octets = BYTE_PER_LINE x Hauteur d'une rayure blanche ; Hauteur d'une ligne = 8 pixels
+                    move.w #BYTE_PER_LINE*8/4-1,d6
+
+
+                    
+\white_loop         move.l #$ffffffff,(a0)+
+                    dbra d6,\white_loop
+
+                    ; Dessine une rayure noire (8 lignes noires).
+                    move.w  #BYTE_PER_LINE*8/4-1,d6
+
+\black_loop         clr.l   (a0)+
+                    dbra    d6,\black_loop
+                    ; Reboucle tant qu'il reste des rayures ; blanches et noires à dessiner.
+                    dbra d7,\loop
+                    ; Restaure les registres puis sortie.
+                    movem.l (a7)+,d6/d7/a0
+                    rts
