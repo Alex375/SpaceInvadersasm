@@ -48,21 +48,6 @@ PixelToByte         ; Taille en pixels + 7 -> D3.W
                     ; Sortie du sous-programme.
                     rts
 
-CopyLine            ; Sauvegarde les registres dans la pile.
-                    movem.l d3/a1,-(a7)
-
-                    ; Nombre d'itÃ©rations = Largeur en octets
-                    ; Nombre d'itÃ©rations - 1 (car DBRA) -> D3.W
-                    subq.w  #1,d3
-
-\loop               ; Copie tous les octets de la ligne.
-                    move.b  (a0)+,(a1)+
-                    dbra    d3,\loop
-
-                    ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d3/a1
-                    rts
-
 CopyBitmap          ; Sauvegarde les registres dans la pile.
                     movem.l d3/d4/a0/a1,-(a7)
 
@@ -193,41 +178,35 @@ FillScreen          ; Sauvegarde les registres dans la pile.
 					movem.l (a7)+,d7/a0
 					rts
 					
-; Main                lea     InvaderA_Bitmap,a0
-;                     lea     VIDEO_START+14+100*BYTE_PER_LINE,a1
-;                     jsr     CopyBitmap
+Main                lea     InvaderA_Bitmap,a0
+                    lea     VIDEO_START+14+100*BYTE_PER_LINE,a1
+                    jsr     CopyBitmap
+                     
+                    lea     InvaderB_Bitmap,a0
+                    lea     VIDEO_START+28+100*BYTE_PER_LINE,a1
+                    jsr     CopyBitmap
+                     
+                    lea     InvaderC_Bitmap,a0
+                    lea     VIDEO_START+42+100*BYTE_PER_LINE,a1
+                    jsr     CopyBitmap
 
-;                     lea     InvaderB_Bitmap,a0
-;                     lea     VIDEO_START+28+100*BYTE_PER_LINE,a1
-;                     jsr     CopyBitmap
+                    lea     Ship_Bitmap,a0
+					lea     VIDEO_START+28+200*BYTE_PER_LINE,a1
+                    jsr     CopyBitmap
 
-;                     lea     InvaderC_Bitmap,a0
-;                     lea     VIDEO_START+42+100*BYTE_PER_LINE,a1
-;                     jsr     CopyBitmap
+ 					; Test 1
+ 					move.l  #$ffffffff,d0
+					jsr     FillScreen
+ 					; Test 2
+ 					move.l #$f0f0f0f0,d0
+ 					jsr     FillScreen; Test 3
+ 					move.l #$fff0fff0,d0
+ 					jsr     FillScreen 
+ 					; Test 4
+ 					moveq.l #$0,d0
+ 					jsr     FillScreen
+ 					illegal
 
-;                     lea     Ship_Bitmap,a0
-;                     lea     VIDEO_START+28+200*BYTE_PER_LINE,a1
-;                     jsr     CopyBitmap
-
-; 					; Test 1
-; 					move.l  #$ffffffff,d0
-; 					jsr     FillScreen
-; 					; Test 2
-; 					move.l #$f0f0f0f0,d0
-; 					jsr     FillScreen; Test 3
-; 					move.l #$fff0fff0,d0
-; 					jsr     FillScreen 
-; 					; Test 4
-; 					moveq.l #$0,d0
-; 					jsr     FillScreen
-; 					illegal
-\loop
-                    move.w  #2,d0
-                    jsr     WhiteSquare
-                    addq.w  #2,d0
-                    cmpi.w  #40,d0
-                    bls     \loop
-                    illegal
 
 
 HLines              ; Sauvegarde les registres dans la pile.
@@ -374,7 +353,8 @@ WhiteSquare         ; Sauvegarde les registres dans la pile.
                     lsr.w #1,d1
                     adda.w d1,a0
                     ; Centre verticalement.
-                    ; A0 + ((Hauteur totale - Hauteur carré) / 2) * BYTE_PER_LINE move.w #VIDEO_HEIGHT,d1
+                    ; A0 + ((Hauteur totale - Hauteur carré) / 2) * BYTE_PER_LINE 
+                    move.w #VIDEO_HEIGHT,d1
                     sub.w d2,d1
                     lsr.w #1,d1
                     mulu.w #BYTE_PER_LINE,d1
@@ -391,3 +371,56 @@ WhiteSquare         ; Sauvegarde les registres dans la pile.
                     ; Restaure les registres puis sortie.
                     movem.l (a7)+,d0-d2/a0
                     rts
+                    
+CopyLine           	; Sauvegarde les registres.
+					movem.l d1-d4/a1,-(a7)
+					
+					; Nombre d'itérations = Largeur en octets
+					; Nombre d'itérations - 1 (car DBRA) -> D3.W
+					subq.w #1,d3
+					
+\loop				; Octet à copier -> D1.B et D2.B
+					move.b (a0)+,d1
+					move.b d1,d2
+					
+					; Décale D1.B vers la droite de D0 bits.
+					lsr.b d0,d1
+					
+					; Décale D2.B vers la gauche de (8 - D0) bits.
+					moveq.l #8,d4
+					sub.w d0,d4
+					lsl.b d4,d2
+					; Copie D1.B et D2.B dans la mémoire vidéo.
+					or.b d1,(a1)+
+					or.b d2,(a1)
+					
+					; Reboucle tant qu'il y a des octets à copier.
+					dbra d3,\loop
+					; Restaure les registres puis sortie.
+					movem.l (a7)+,d1-d4/a1
+					rts
+					
+PixelToAdress  		; Sauvegarde les registres.
+					movem.l d1/d2,-(a7)
+					
+					; Détermine le nombre d'octets à ajouter en abscisse.
+					; Divise l'abscisse par 8 :
+					; Quotient -> D1.W (nombre d'octets)
+					; Reste -> D0.W (décalage)
+					move.w d1,d0
+					lsr.w #3,d1
+					andi.w #%111,d0
+					
+					; Détermine le nombre d'octets à ajouter en ordonnée.
+					; Multiplie l'ordonnée par le nombre d'octets par ligne.
+					; D2.W * BYTE_PER_LINE -> D2.L
+					mulu.w #BYTE_PER_LINE,d2
+					
+					; Détermine l'adresse vidéo.
+					; VIDEO_START + Nombre d'octets à ajouter en abscisse et en ordonnée.
+					lea     VIDEO_START,a1
+					adda.w d1,a1
+					adda.l d2,a1
+					; Restaure les registres puis sortie.
+					movem.l (a7)+,d1/d2
+					rts
