@@ -335,6 +335,16 @@ PrintBitmap			; Sauvegarde les registres.
 					movem.l (a7)+,d0/a1
 					rts
 
+ClearScreen         ; Sauvegarde les registres.
+					move.l d0,-(a7)
+					
+					; Remplit la mémoire vidéo avec des zéros.
+					moveq.l #0,d0
+					jsr     FillScreen
+					; Restaure les registres puis sortie.
+					move.l (a7)+,d0
+					rts
+
 Main 				lea     InvaderA_Bitmap,a0
 					move.w #112,d1
 					move.w #100,d2
