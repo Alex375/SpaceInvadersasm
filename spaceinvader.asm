@@ -10,6 +10,7 @@ VIDEO_WIDTH         equ     480                             ; Largeur en pixels
 VIDEO_HEIGHT        equ     320                             ; Hauteur en pixels
 VIDEO_SIZE          equ     (VIDEO_WIDTH*VIDEO_HEIGHT/8)    ; Taille en octets
 BYTE_PER_LINE       equ     (VIDEO_WIDTH/8)                 ; Nombre d'octets par ligne
+VIDEO_BUFFER        equ     (VIDEO_START-VIDEO_SIZE)		; Tampon vidéo
 
                     ; Bitmaps
                     ; ------------------------------
@@ -24,7 +25,7 @@ MATRIX              equ     4                               ; Matrice de points
 
                     org     $0
 
-vector_000          dc.l    VIDEO_START                     ; Valeur initiale de A7
+vector_000          dc.l    VIDEO_BUFFER                    ; Valeur initiale de A7
 vector_001          dc.l    Main                            ; Valeur initiale du PC
 
                     ; ==============================
@@ -314,7 +315,7 @@ PixelToAddress  		; Sauvegarde les registres.
 					
 					; Détermine l'adresse vidéo.
 					; VIDEO_START + Nombre d'octets à ajouter en abscisse et en ordonnée.
-					lea     VIDEO_START,a1
+					lea     VIDEO_BUFFER,a1
 					adda.w d1,a1
 					adda.l d2,a1
 					; Restaure les registres puis sortie.
@@ -381,13 +382,15 @@ PrintSprite         ; Sauvegarde les registres.
 
 IsOutOfX        ; Sauvegarde les registres.
                 move.l  d1,-(a7)
-                ; Si l'abscisse est négative, le bitmap sort de l'écran. ; On renvoie true.
+                ; Si l'abscisse est négative, le bitmap sort de l'écran. 
+                ; On renvoie true.
                 tst.w d1
                 bmi \true
                 ; Abscisse à la droite du bitmap -> D1.W
                 add.w   WIDTH(a0),d1
                 ; Si l'abscisse à la droite du bitmap
-                ; est supérieure stricte à la largeur de l'écran, ; le bitmap sort de l'écran.
+                ; est supérieure stricte à la largeur de l'écran, 
+                ; le bitmap sort de l'écran.
                 ; On renvoie true.
                 cmp.w #VIDEO_WIDTH,d1
                 bgt \true
@@ -425,7 +428,7 @@ IsOutOfY            ; Sauvegarde les registres.
                     ori.b   #%00000100,ccr
                     rts
             
-InfoOutOfScreen     ; Si le bitmap sort de l'axe des abscisses, on renvoie true.
+IsOutOfScreen       ; Si le bitmap sort de l'axe des abscisses, on renvoie true.
                     jsr     IsOutOfX
                     beq     \quit
                     ; Si le bitmat sort de l'axe des ordonnées, on renvoie true. ; Sinon on renvoie false.
@@ -434,11 +437,14 @@ InfoOutOfScreen     ; Si le bitmap sort de l'axe des abscisses, on renvoie true.
 
 MoveSprite      ; Sauvegarde les registres.
                 movem.l d1/d2/a0,-(a7)
-                ; Nouvelle abscisse du sprite -> D1.W ; Nouvelle ordonnée du sprite -> D2.W add.w X(a1),d1
+                ; Nouvelle abscisse du sprite -> D1.W ; Nouvelle ordonnée du sprite -> D2.W 
+                add.w X(a1),d1
                 add.w Y(a1),d2
                 ; Adresse du bitmap 1 du sprite -> A0.L
-                movea.l BITMAP1 (a1),a0
-                ; Si les nouvelles coordonnées font sortir le bitmap de l'écran, ; on renvoie false (sans modifier les coordonnées du sprite). jsr IsOutOfScreen
+                movea.l BITMAP1(a1),a0
+                ; Si les nouvelles coordonnées font sortir le bitmap de l'écran, 
+                ; on renvoie false (sans modifier les coordonnées du sprite). 
+                jsr IsOutOfScreen
                 beq \false
                 ; Sinon, on modifie les coordonées du sprite.
                 move.w  d1,X(a1)
@@ -479,23 +485,36 @@ MoveSpriteKeyboard  ; Sauvegarde les registres.
                     ; Restaure les registres puis sortie.
                     movem.l (a7)+,d1/d2
                     rts
+                    
 
-Main 				lea     InvaderA_Bitmap,a0
-					move.w #112,d1
-					move.w #100,d2
-					jsr     PrintBitmap
-					lea     InvaderB_Bitmap,a0
-					move.w #224,d1
-					jsr     PrintBitmap
-					lea     InvaderC_Bitmap,a0
-					move.w #336,d1 
-					jsr     PrintBitmap
-					lea     Ship_Bitmap,a0
-					move.w #223,d1
-					move.w #200,d2
-					jsr     PrintBitmap
-					
+
+Main 				; Fait pointer A1.L sur un sprite.
+					lea     Invader,a1
+					; Le déplacement sera d'un pixel vers la droite.
+					move.w  #1,d1
+					move.w  #1,d2
+\loop 				; Affiche le sprite.
+					jsr     PrintSprite
+					jsr     BufferToScreen
+					; Déplace le sprite et reboucle                    
+					; jusqu'à atteindre le bord droit de l'écran.
+					jsr     MoveSprite
+					beq \loop
 					illegal
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 					
 					; ==============================
                     ; DonnÃ©es
@@ -509,6 +528,11 @@ LEFT_KEY  equ     $46f
 UP_KEY    equ     $470
 RIGHT_KEY equ     $471
 DOWN_KEY  equ     $472
+
+Invader             dc.w    SHOW                            ; Afficher le sprite
+					dc.w	0,152; X = 0, Y = 152
+					dc.l    InvaderA_Bitmap                 ; Bitmap à afficher
+					dc.l    0
 
 InvaderA_Bitmap     dc.w    24,16
                     dc.b    %00000000,%11111111,%00000000
@@ -579,4 +603,13 @@ Ship_Bitmap         dc.w    24,14
                     dc.b    %11111111,%11111111,%11111111
                     dc.b    %11111111,%11111111,%11111111
                     dc.b    %11111111,%11111111,%11111111
-    
+; Sprites
+; ------------------------------
+STATE               equ 0; État de l'affichage
+X                   equ 2; Abscisse
+Y                   equ 4; Ordonnée
+BITMAP1             equ 6; Bitmap no 1
+BITMAP2             equ 10; Bitmap no 2
+HIDE                equ 0; Ne pas afficher le sprite
+SHOW                equ 1; Afficher le sprite
+ 
