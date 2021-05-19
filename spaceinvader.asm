@@ -633,7 +633,8 @@ MoveShipShot        ; Sauvegarde les registres.
                     cmp.w   #HIDE,STATE(a1)
                     beq     \quit
                     ; Déplace le tir vers le haut.
-                    ; Si le déplacement a eu lieu, on peut quitter. clr.w d1
+                    ; Si le déplacement a eu lieu, on peut quitter. 
+                    clr.w d1
                     move.w #-SHIP_SHOT_STEP,d2
                     jsr MoveSprite
                     beq \quit
@@ -690,7 +691,7 @@ InitInvaderLine ; Sauvegarde les registres.
                 move.w #32,d3
                 sub.w WIDTH(a1),d3
                 lsr.w #1,d3
-                 add.w d3,d1
+                add.w d3,d1
 \loop           ; Initialise tous les champs du sprite.
                 move.w #SHOW,STATE(a0)
                 move.w d1,X(a0)
@@ -810,6 +811,11 @@ MoveAllInvaders ; Sauvegarde les registres.
 \loop           ; Si l'envahisseur n'est pas affiché, on passe au suivant.
                 cmp.w #HIDE,STATE(a1)
                 beq \continue
+                
+                ; Déplace l'envahisseur et permute ses bitmaps.
+                jsr     MoveSprite
+                jsr     SwapBitmap
+                
                 ; Déplace l'envahisseur.
                 jsr MoveSprite
 \continue       ; Pointe sur le prochain envahisseur.
@@ -829,8 +835,8 @@ MoveInvaders    ; Décrémente la variable "skip",
                 ; et ne fait rien si elle n'est pas nulle.
                 subq.w #1,\skip
                 bne \quit
-                ; Réinitialise "skip" à sa valeur maximale.
-                move.w #8,\skip
+                ; Réinitialise "skip" à sa valeur maximale
+                move.w InvaderSpeed,\skip
 
                 ; Appel de MoveAllInvaders.
                 jsr MoveAllInvaders
@@ -841,16 +847,19 @@ MoveInvaders    ; Décrémente la variable "skip",
 
 
 
-Main                jsr     PrintShip
+Main                jsr     InitInvaders
+
+\loop               jsr     PrintShip
 					jsr     PrintShipShot
+					jsr     PrintInvaders
 					jsr     BufferToScreen
 					jsr     MoveShip
+					jsr     MoveInvaders
 					jsr     MoveShipShot
 					jsr     NewShipShot
-					bra     Main
-					; ...
+					bra		\loop
 
-					; ...
+
 					; ==============================
 					; Données
 					; ==============================
@@ -914,11 +923,12 @@ Invader             dc.w    SHOW                            ; Afficher le sprite
 
                
 InvaderX            dc.w (VIDEO_WIDTH-(INVADER_PER_LINE*32))/2; Abscisse globale
-InvaderY            dc.w 32; Ordonnée globale
-
-                
-;Invaders            ds.b    INVADER_COUNT*SIZE_OF_SPRITE
+InvaderY            dc.w 32; Ordonnée global
 InvaderCurrentStep  dc.w    INVADER_STEP_X 
+InvaderCount        dc.w	INVADER_COUNT         ; Cpt. d'envahisseurs
+InvaderSpeed        dc.w    8                                       ; Vitesse (1 -> 8)
+SpeedLevels         dc.w  1,5,10,15,20,25,35,50   ; Paliers de vitesse
+
                 
 
 
