@@ -491,6 +491,152 @@ MoveSpriteKeyboard  ; Sauvegarde les registres.
                     rts
                     
 
+GetRectangle        ; Sauvegarde les registres.
+                    move.l a0,-(a7)
+                    ; Abscisse du point supérieur gauche -> D1.W
+                    move.w X(a0),d1
+                    ; Ordonnée du point supérieur gauche -> D2.W
+                    move.w Y(a0),d2
+                    ; Adresse du bitmap 1 -> A0.L
+                    movea.l BITMAP1(a0),a0
+                    ; Abscisse du point inférieur droit -> D3.W
+                    move.w  WIDTH(a0),d3
+                    add.w   d1,d3
+                    subq.w  #1,d3
+                    ; Ordonnée du point inférieur droit -> D4.W
+                    move.w  HEIGHT(a0),d4
+                    add.w   d2,d4
+                    subq.w  #1,d4
+                    ; Restaure les registres puis sortie.
+                    movea.l (a7)+,a0
+                    rts
+
+IsSpriteColliding   ; Sauvegarde les registres.
+                    movem.l d1-d4/a0,-(a7)
+                    ; Si les sprites ne sont pas visibles, on quitte.
+                    ; Le BNE saute si Z = 0, on renvoie donc false.
+                    ; On ne peut pas effectuer un BNE \false tout de suite, ; car ce dernier passe par le nettoyage de la pile. cmp.w #SHOW,STATE(a1)
+                    bne \quit
+                    cmp.w #SHOW,STATE(a2)
+                    bne \quit
+                    ; Coordonnées du rectangle 1 -> Pile
+                    ; D1.W -> (a7) ; x1 = Abscisse du point supérieur gauche ; D2.W -> 2(a7) ; y1 = Ordonnée du point supérieur gauche ; D3.W -> 4(a7) ; X1 = Abscisse du point inférieur droit ; D4.W -> 6(a7) ; Y1 = Ordonnée du point inférieur droit movea.l a1,a0
+                    jsr GetRectangle
+                    movem.w d1-d4,-(a7)
+                    ; Coordonnées du rectangle 2 -> D1-D4
+                    ; D1.W = x2 = Abscisse du point supérieur gauche ; D2.W = y2 = Ordonnée du point supérieur gauche ; D3.W = X2 = Abscisse du point inférieur droit ; D4.W = Y2 = Ordonnée du point inférieur droit movea.l a2,a0
+                    jsr GetRectangle
+                    ; Si x2 > X1, on renvoie false.
+                    cmp.w   4(a7),d1
+                    bgt     \false
+                    ; Si y2 > Y1, on renvoie false.
+                    cmp.w   6(a7),d2
+                    bgt     \false
+                    ; Si X2 < x1, on renvoie false.
+                    cmp.w   (a7),d3
+                    blt     \false
+                    ; Si Y2 < y1, on renvoie false.
+                    cmp.w   2(a7),d4
+                    blt     \false
+\true               ; Sortie qui renvoie true (Z = 1).
+                    ori.b   #%00000100,ccr
+                    bra     \cleanStack
+\false              ; Sortie qui renvoie false (Z = 0).
+                    andi.b  #%11111011,ccr
+\cleanStack         ; Dépile les coordonnées du rectangle 1.
+                    ; (L'instruction ADDA ne modifie pas les flags.) 
+                    adda.l #8,a7
+\quit               ; Restaure les registres puis sortie.
+                    movem.l (a7)+,d1-d4/a0
+                    rts
+
+
+PrintShip           ; Sauvegarde les registres.
+                    move.l  a1,-(a7)
+                    ; Affiche le vaisseau.
+                    lea     Ship,a1
+                    jsr     PrintSprite
+                    ; Restaure les registres puis sortie.
+                    move.l  (a7)+,a1
+                    rts
+
+
+MoveShip            ; Sauvegarde les registres.
+                    movem.l d1/d2/a1,-(a7)
+                    ; Initialise le mouvement relatif à zéro.
+                    clr.w   d1
+                    clr.w   d2
+\right              ; Si la touche "droite" est pressée,
+                    ; incrémente D1.W (déplacement vers la droite). tst.b RIGHT_KEY
+                    beq \left
+                    add.w #SHIP_STEP,d1
+\left               ; Si la touche "gauche" est pressée,
+                    ; décrémente D1.W (déplacement vers la gauche). tst.b LEFT_KEY
+                    beq \next
+                    sub.w #SHIP_STEP,d1
+\next               ; Déplace le vaisseau (en fonction de D1.W et de D2.W).
+                    lea     Ship,a1
+                    jsr     MoveSprite
+                    ; Restaure les registres puis sortie.
+                    movem.l (a7)+,d1/d2/a1
+                    rts
+
+PrintShipShot       ; Sauvegarde les registres.
+                    move.l  a1,-(a7)
+                    ; Affiche le tir du vaisseau.
+                    lea     ShipShot,a1
+                    jsr     PrintSprite
+                    ; Restaure les registres puis sortie.
+                    move.l  (a7)+,a1
+                    rts
+
+MoveShipShot        ; Sauvegarde les registres.
+                    movem.l a1/d1/d2,-(a7)
+                    ; Adresse du sprite de tir -> A1.L
+                    lea     ShipShot,a1
+                    ; Si le tir n'est pas affiché, on ne fait rien.
+                    cmp.w   #HIDE,STATE(a1)
+                    beq     \quit
+                    ; Déplace le tir vers le haut.
+                    ; Si le déplacement a eu lieu, on peut quitter. clr.w d1
+                    move.w #-SHIP_SHOT_STEP,d2
+                    jsr MoveSprite
+                    beq \quit
+\outOfScreen        ; Sinon, le tir sort de l'écran. 
+                    ; Il faut alors le camoufler. 
+                    move.w #HIDE,STATE(a1)
+\quit               ; Restaure les registres puis sortie.
+                    movem.l (a7)+,a1/d1/d2
+                    rts
+
+
+NewShipShot         movem.l d1-d3/a0/a1,-(a7)
+                    ; Si la touche espace est relâchée, on ne fait rien.
+                    tst.b   SPACE_KEY
+                    beq     \quit
+                    ; Si le tir de vaisseau est déjà présent, on ne fait rien.
+                    lea     ShipShot,a0
+                    cmp.w   #SHOW,STATE(a0)
+                    beq     \quit
+                    ; Coordonées du vaisseau -> Coordonées du tir
+                    lea     Ship,a1
+                    move.w  X(a1),X(a0)
+                    move.w  Y(a1),Y(a0)
+                    ; Largeur du vaisseau -> D1.W
+                    movea.l BITMAP1(a1),a1
+                    move.w  WIDTH(a1),d1
+                    ; Hauteur du tir -> D2.W ; Largeur du tir -> D3.W movea.l BITMAP1(a0),a1 move.w HEIGHT(a1),d2 move.w WIDTH(a1),d3
+                    ; Centre le tir horizontalement par rapport au vaisseau.
+                    sub.w   d3,d1
+                    lsr.w   #1,d1
+                    add.w   d1,X(a0)
+                    ; Positionne le tir juste au dessus du vaisseau.
+                    sub.w d2,Y(a0)
+                    ; Le tir est rendu visible.
+                    move.w  #SHOW,STATE(a0)
+\quit               ; Restaure les registres puis sortie.
+                    movem.l (a7)+,d1-d3/a0/a1
+                    rts
 
 Main 				; Fait pointer A1.L sur un sprite.
 					lea     Invader,a1
@@ -535,6 +681,16 @@ Invader             dc.w    SHOW                            ; Afficher le sprite
 					dc.w	0,152; X = 0, Y = 152
 					dc.l    InvaderA_Bitmap                 ; Bitmap à afficher
 					dc.l    0
+
+
+MovingSprite    dc.w SHOW 
+                dc.w 0,152
+                dc.l InvaderB_Bitmap 
+                dc.l 0
+FixedSprite     dc.w SHOW
+                dc.w 228,152
+                dc.l InvaderA_Bitmap 
+                dc.l 0
 
 InvaderA_Bitmap     dc.w    24,16
                     dc.b    %00000000,%11111111,%00000000
@@ -614,4 +770,12 @@ BITMAP1             equ 6; Bitmap no 1
 BITMAP2             equ 10; Bitmap no 2
 HIDE                equ 0; Ne pas afficher le sprite
 SHOW                equ 1; Afficher le sprite
- 
+
+
+ShipShot_Bitmap     dc.w 2,6
+                    dc.b %11000000
+                    dc.b %11000000 
+                    dc.b %11000000 
+                    dc.b %11000000 
+                    dc.b %11000000 
+                    dc.b %11000000
