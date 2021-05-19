@@ -19,6 +19,31 @@ WIDTH               equ     0                               ; Largeur en pixels
 HEIGHT              equ     2                               ; Hauteur en pixels
 MATRIX              equ     4                               ; Matrice de points
 
+; Envahisseurs
+; ------------------------------
+
+
+INVADER_PER_LINE    equ		10
+INVADER_PER_COLUMN  equ		5
+INVADER_COUNT       equ     INVADER_PER_LINE*INVADER_PER_COLUMN
+INVADER_STEP_X      equ	4
+INVADER_STEP_Y      equ	8
+INVADER_X_MIN       equ	0
+INVADER_X_MAX       equ (VIDEO_WIDTH-(INVADER_PER_LINE*32))
+SHIP_STEP           equ 4; Pas du vaisseau
+SHIP_SHOT_STEP      equ 4; Pas d'un tir de vaisseau
+
+
+; Sprites
+; ------------------------------
+STATE               equ 0; État de l'affichage
+X                   equ 2; Abscisse
+Y                   equ 4; Ordonnée
+BITMAP1             equ 6; Bitmap no 1
+BITMAP2             equ 10; Bitmap no 2
+HIDE                equ 0; Ne pas afficher le sprite
+SHOW                equ 1; Afficher le sprite
+SIZE_OF_SPRITE      equ 14; Taille d'un sprite en octets
                     ; ==============================
                     ; Initialisation des vecteurs
                     ; ==============================
@@ -520,11 +545,19 @@ IsSpriteColliding   ; Sauvegarde les registres.
                     cmp.w #SHOW,STATE(a2)
                     bne \quit
                     ; Coordonnées du rectangle 1 -> Pile
-                    ; D1.W -> (a7) ; x1 = Abscisse du point supérieur gauche ; D2.W -> 2(a7) ; y1 = Ordonnée du point supérieur gauche ; D3.W -> 4(a7) ; X1 = Abscisse du point inférieur droit ; D4.W -> 6(a7) ; Y1 = Ordonnée du point inférieur droit movea.l a1,a0
+                    ; D1.W -> (a7) ; x1 = Abscisse du point supérieur gauche 
+                    ; D2.W -> 2(a7) ; y1 = Ordonnée du point supérieur gauche 
+                    ; D3.W -> 4(a7) ; X1 = Abscisse du point inférieur droit 
+                    ; D4.W -> 6(a7) ; Y1 = Ordonnée du point inférieur droit 
+                    movea.l a1,a0
                     jsr GetRectangle
                     movem.w d1-d4,-(a7)
                     ; Coordonnées du rectangle 2 -> D1-D4
-                    ; D1.W = x2 = Abscisse du point supérieur gauche ; D2.W = y2 = Ordonnée du point supérieur gauche ; D3.W = X2 = Abscisse du point inférieur droit ; D4.W = Y2 = Ordonnée du point inférieur droit movea.l a2,a0
+                    ; D1.W = x2 = Abscisse du point supérieur gauche 
+                    ; D2.W = y2 = Ordonnée du point supérieur gauche 
+                    ; D3.W = X2 = Abscisse du point inférieur droit 
+                    ; D4.W = Y2 = Ordonnée du point inférieur droit 
+                    movea.l a2,a0
                     jsr GetRectangle
                     ; Si x2 > X1, on renvoie false.
                     cmp.w   4(a7),d1
@@ -567,11 +600,13 @@ MoveShip            ; Sauvegarde les registres.
                     clr.w   d1
                     clr.w   d2
 \right              ; Si la touche "droite" est pressée,
-                    ; incrémente D1.W (déplacement vers la droite). tst.b RIGHT_KEY
+                    ; incrémente D1.W (déplacement vers la droite). 
+                    tst.b RIGHT_KEY
                     beq \left
                     add.w #SHIP_STEP,d1
 \left               ; Si la touche "gauche" est pressée,
-                    ; décrémente D1.W (déplacement vers la gauche). tst.b LEFT_KEY
+                    ; décrémente D1.W (déplacement vers la gauche). 
+                    tst.b LEFT_KEY
                     beq \next
                     sub.w #SHIP_STEP,d1
 \next               ; Déplace le vaisseau (en fonction de D1.W et de D2.W).
@@ -625,7 +660,11 @@ NewShipShot         movem.l d1-d3/a0/a1,-(a7)
                     ; Largeur du vaisseau -> D1.W
                     movea.l BITMAP1(a1),a1
                     move.w  WIDTH(a1),d1
-                    ; Hauteur du tir -> D2.W ; Largeur du tir -> D3.W movea.l BITMAP1(a0),a1 move.w HEIGHT(a1),d2 move.w WIDTH(a1),d3
+                    ; Hauteur du tir -> D2.W 
+                    ; Largeur du tir -> D3.W 
+                    movea.l BITMAP1(a0),a1 
+                    move.w HEIGHT(a1),d2 
+                    move.w WIDTH(a1),d3
                     ; Centre le tir horizontalement par rapport au vaisseau.
                     sub.w   d3,d1
                     lsr.w   #1,d1
@@ -651,7 +690,7 @@ InitInvaderLine ; Sauvegarde les registres.
                 move.w #32,d3
                 sub.w WIDTH(a1),d3
                 lsr.w #1,d3
-                add.w d3,d1
+                 add.w d3,d1
 \loop           ; Initialise tous les champs du sprite.
                 move.w #SHOW,STATE(a0)
                 move.w d1,X(a0)
@@ -801,18 +840,30 @@ MoveInvaders    ; Décrémente la variable "skip",
 \skip           dc.w 1
 
 
-Main 				; Fait pointer A1.L sur un sprite.
-					lea     Invader,a1
-					; Le déplacement sera d'un pixel vers la droite.
-\loop 				; Affiche le sprite.
-					jsr     PrintSprite
+
+Main                jsr     PrintShip
+					jsr     PrintShipShot
 					jsr     BufferToScreen
-					; Déplace le sprite et reboucle                    
-					; jusqu'à atteindre le bord droit de l'écran.
-					jsr     MoveSpriteKeyboard
-					bra \loop
-					illegal
-					
+					jsr     MoveShip
+					jsr     MoveShipShot
+					jsr     NewShipShot
+					bra     Main
+					; ...
+
+					; ...
+					; ==============================
+					; Données
+					; ==============================
+					; Sprites
+					; ------------------------------
+MovingSprite        dc.w    SHOW
+					dc.w    0,152
+					dc.l    InvaderB_Bitmap
+					dc.l	0
+FixedSprite         dc.w    SHOW
+					dc.w	228,152
+					dc.l    InvaderA_Bitmap
+					dc.l	0
 					
 					
 					
@@ -831,6 +882,17 @@ Main 				; Fait pointer A1.L sur un sprite.
                     ; DonnÃ©es
                     ; ==============================
 
+Invaders            ds.b    INVADER_COUNT*SIZE_OF_SPRITE
+
+
+Ship 				dc.w    SHOW
+					dc.w	(VIDEO_WIDTH-24)/2,VIDEO_HEIGHT-32
+					dc.l    Ship_Bitmap
+					dc.l	0
+ShipShot 			dc.w    HIDE
+					dc.w	0,0
+					dc.l    ShipShot_Bitmap
+					dc.l	0
 
 ; Touches du clavier
 ; ------------------------------
@@ -846,14 +908,19 @@ Invader             dc.w    SHOW                            ; Afficher le sprite
 					dc.l    0
 
 
-MovingSprite    dc.w SHOW 
-                dc.w 0,152
-                dc.l InvaderB_Bitmap 
-                dc.l 0
-FixedSprite     dc.w SHOW
-                dc.w 228,152
-                dc.l InvaderA_Bitmap 
-                dc.l 0
+
+
+
+
+               
+InvaderX            dc.w (VIDEO_WIDTH-(INVADER_PER_LINE*32))/2; Abscisse globale
+InvaderY            dc.w 32; Ordonnée globale
+
+                
+;Invaders            ds.b    INVADER_COUNT*SIZE_OF_SPRITE
+InvaderCurrentStep  dc.w    INVADER_STEP_X 
+                
+
 
 InvaderA_Bitmap     dc.w    24,16
                     dc.b    %00000000,%11111111,%00000000
@@ -924,15 +991,8 @@ Ship_Bitmap         dc.w    24,14
                     dc.b    %11111111,%11111111,%11111111
                     dc.b    %11111111,%11111111,%11111111
                     dc.b    %11111111,%11111111,%11111111
-; Sprites
-; ------------------------------
-STATE               equ 0; État de l'affichage
-X                   equ 2; Abscisse
-Y                   equ 4; Ordonnée
-BITMAP1             equ 6; Bitmap no 1
-BITMAP2             equ 10; Bitmap no 2
-HIDE                equ 0; Ne pas afficher le sprite
-SHOW                equ 1; Afficher le sprite
+
+
 
 
 ShipShot_Bitmap     dc.w 2,6
