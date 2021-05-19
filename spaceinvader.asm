@@ -455,8 +455,8 @@ MoveSprite      ; Sauvegarde les registres.
                 bra     \quit
                 ; Sortie qui renvoie false (Z = 0).
 \false          andi.b  #%11111011,ccr
-                movem.l (a7)+,d1/d2/a0
-\quit           rts
+\quit           movem.l (a7)+,d1/d2/a0
+				rts
 
 
 MoveSpriteKeyboard  ; Sauvegarde les registres. 
@@ -465,19 +465,23 @@ MoveSpriteKeyboard  ; Sauvegarde les registres.
                     clr.w   d1
                     clr.w   d2
 \up                 ; Si la touche "haut" est pressée,
-                    ; décremente D2.W (déplacement d'un pixel vers le haut). tst.b UP_KEY
+                    ; décremente D2.W (déplacement d'un pixel vers le haut). 
+                    tst.b UP_KEY
                     beq \down
                     sub.w #1,d2
 \down               ; Si la touche "bas" est pressée,
-                    ; incrémente D2.W (déplacement d'un pixel vers le bas). tst.b DOWN_KEY
+                    ; incrémente D2.W (déplacement d'un pixel vers le bas). 
+                    tst.b DOWN_KEY
                     beq \right
                     add.w #1,d2
 \right              ; Si la touche "droite" est pressée,
-                    ; incrémente D1.W (déplacement d'un pixel vers la droite). tst.b RIGHT_KEY
+                    ; incrémente D1.W (déplacement d'un pixel vers la droite). 
+                    tst.b RIGHT_KEY
                     beq \left
                     add.w #1,d1
 \left               ; Si la touche "gauche" est pressée,
-                    ; décremente D1.W (déplacement d'un pixel vers la gauche). tst.b LEFT_KEY
+                    ; décremente D1.W (déplacement d'un pixel vers la gauche). 
+                    tst.b LEFT_KEY
                     beq \next
                     sub.w #1,d1
 \next               ; Déplace le sprite (en fonction de D1.W et de D2.W).
@@ -491,15 +495,13 @@ MoveSpriteKeyboard  ; Sauvegarde les registres.
 Main 				; Fait pointer A1.L sur un sprite.
 					lea     Invader,a1
 					; Le déplacement sera d'un pixel vers la droite.
-					move.w  #1,d1
-					move.w  #1,d2
 \loop 				; Affiche le sprite.
 					jsr     PrintSprite
 					jsr     BufferToScreen
 					; Déplace le sprite et reboucle                    
 					; jusqu'à atteindre le bord droit de l'écran.
-					jsr     MoveSprite
-					beq \loop
+					jsr     MoveSpriteKeyboard
+					bra \loop
 					illegal
 					
 					
