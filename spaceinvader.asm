@@ -638,6 +638,169 @@ NewShipShot         movem.l d1-d3/a0/a1,-(a7)
                     movem.l (a7)+,d1-d3/a0/a1
                     rts
 
+
+InitInvaderLine ; Sauvegarde les registres.
+                movem.l d1-d3/d7/a0,-(a7)
+                ; Nombre d'itérations = Nombre d'envahisseurs par ligne
+                ; Nombre d'itérations - 1 (car DBRA) -> D7.W
+                move.w #INVADER_PER_LINE-1,d7
+
+                ; Modifie l'abscisse de départ de la ligne
+                ; afin de centrer le sprite sur une largeur de 32 pixels.
+                ; D1.W += (32 - Largeur du sprite) / 2
+                move.w #32,d3
+                sub.w WIDTH(a1),d3
+                lsr.w #1,d3
+                add.w d3,d1
+\loop           ; Initialise tous les champs du sprite.
+                move.w #SHOW,STATE(a0)
+                move.w d1,X(a0)
+                move.w d2,Y(a0)
+                move.l a1,BITMAP1(a0)
+                move.l a2,BITMAP2(a0)
+
+                ; Passe à l'envahisseur suivant.
+                adda.l #SIZE_OF_SPRITE,a0
+                addi.w #32,d1
+                dbra d7,\loop
+
+                ; Restaure les registres puis sortie.
+                movem.l (a7)+,d1-d3/d7/a0
+                rts
+
+
+
+PrintInvaders   ; Sauvegarde les registres.
+                movem.l d7/a1,-(a7)
+                ; Nombre d'itérations = Nombre d'envahisseurs
+                ; Nombre d'itérations - 1 (car DBRA) -> D7.W
+                move.w #INVADER_COUNT-1,d7
+
+                ; Adresse de départ des sprites -> A1.L
+                lea Invaders,a1
+\loop           ; Affiche un envahisseur.
+                jsr PrintSprite
+                ; Passe au prochain envahisseur et reboucle.
+                adda.l #SIZE_OF_SPRITE,a1
+                dbra d7,\loop
+                ; Sauvegarde les registres puis sortie.
+                movem.l (a7)+,d7/a1
+                rts
+
+
+InitInvaders    ; Sauvegarde les registres.
+                movem.l d1/d2/a0-a2,-(a7)
+
+                ; 1re ligne d'envahisseurs.
+                move.w InvaderX,d1
+                move.w InvaderY,d2
+                lea Invaders,a0
+                lea InvaderC_Bitmap,a1
+                lea 0,a2
+                jsr InitInvaderLine
+                ; 2e ligne d'envahisseurs.
+                add.w #32,d2
+                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                lea InvaderB_Bitmap,a1
+                jsr InitInvaderLine
+                ; 3e ligne d'envahisseurs.
+                add.w #32,d2
+                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                jsr InitInvaderLine
+                ; 4e ligne d'envahisseurs.
+                add.w #32,d2
+                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                lea InvaderA_Bitmap,a1
+                jsr InitInvaderLine
+                ; 5e ligne d'envahisseurs.
+                add.w #32,d2
+                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                jsr InitInvaderLine
+                ; Restaure les registres puis sortie.
+                movem.l (a7)+,d1/d2/a0-a2
+                rts
+
+
+
+
+GetInvaderStep  ; Sauvegarde les registres.
+                move.l d0,-(a7)
+                ; Nouvelle abscisse globale -> D0.W
+                move.w InvaderX,d0
+                add.w InvaderCurrentStep,d0
+                ; Si l'abscisse globale est trop petite,
+                ; les envahisseurs ont atteint le bord gauche.
+                ; Il faut donc changer de direction.
+                cmpi.w #INVADER_X_MIN,d0
+                blt \change
+                ; Si l'abscisse globale est trop grande,
+                ; les envahisseurs ont atteint le bord droit.
+                ; Il faut donc changer de direction.
+                cmpi.w #INVADER_X_MAX,d0
+                bgt \change
+\noChange       ; Pas de changement de direction.
+                ; Mouvement relatif -> D1.W et D2.W.
+                ; L'abscisse globale est mise à jour.
+                move.w InvaderCurrentStep,d1
+                clr.w d2
+                move.w d0,InvaderX
+                bra \quit
+\change         ; Changement de direction.
+                ; Mouvement relatif -> D1.W et D2.W.
+                ; L'ordonnée globale est mise à jour.
+                ; Le signe du pas est inversé.
+                clr.w d1
+                move.w #INVADER_STEP_Y,d2
+                add.w d2,InvaderY
+                neg.w InvaderCurrentStep
+\quit           ; Restaure les registres puis sortie.
+                move.l (a7)+,d0
+                rts
+
+
+
+MoveAllInvaders ; Sauvegarde les registres.
+                movem.l d1/d2/a1/d7,-(a7)
+                ; Récupère les déplacements relatifs dans D1.W et D2.W.
+                ; (La position globale est mise à jour.)
+                jsr GetInvaderStep
+                ; Fait pointer A1.L sur le premier envahisseur.
+                lea Invaders,a1
+                ; Nombre d'envahisseurs - 1 (car DBRA) -> D7.W
+                move.w #INVADER_COUNT-1,d7
+\loop           ; Si l'envahisseur n'est pas affiché, on passe au suivant.
+                cmp.w #HIDE,STATE(a1)
+                beq \continue
+                ; Déplace l'envahisseur.
+                jsr MoveSprite
+\continue       ; Pointe sur le prochain envahisseur.
+                adda.l #SIZE_OF_SPRITE,a1
+
+                ; On reboucle tant qu'il reste des envahisseurs.
+                dbra d7,\loop
+\quit           ; Restaure les registres puis sortie.
+                movem.l (a7)+,d1/d2/a1/d7
+                rts
+
+
+
+
+
+MoveInvaders    ; Décrémente la variable "skip",
+                ; et ne fait rien si elle n'est pas nulle.
+                subq.w #1,\skip
+                bne \quit
+                ; Réinitialise "skip" à sa valeur maximale.
+                move.w #8,\skip
+
+                ; Appel de MoveAllInvaders.
+                jsr MoveAllInvaders
+\quit           ; Sortie du sous programme.
+                rts
+                ; Compteur d'affichage des envahisseurs
+\skip           dc.w 1
+
+
 Main 				; Fait pointer A1.L sur un sprite.
 					lea     Invader,a1
 					; Le déplacement sera d'un pixel vers la droite.
