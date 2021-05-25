@@ -37,6 +37,11 @@ INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
 INVADER_SHOT_MAX    equ     5
 
 
+SHIP_WIN 			equ 1
+SHIP_HIT 			equ 3
+SHIP_COLLIDING 		equ 45
+INVADER_LOW 		equ 100
+
 
 ; Sprites
 ; ------------------------------
@@ -1200,6 +1205,46 @@ IsInvaderTooLow ; Sauvegarde les registres.
                 rts
                 
                 
+                
+IsGameOver		movem.l d7/a0,-(a7)
+
+				lea Invaders,a0
+				
+                ; Nombre d'itérations = Nombre d'envahisseurs.
+                ; Nombre d'itérations - 1 (car DBRA) -> D7.W
+                move.w 		#INVADER_COUNT-1,d7
+\loop           ; Si l'envahisseur n'est pas affiché,
+                ; on passe à l'envahisseur suivant.
+                cmp.w 		#HIDE,STATE(a0)
+                bne   		\touched 
+                adda.l 		#SIZE_OF_SPRITE,a0
+                dbra 		d7,\loop
+                
+                move.l 		#SHIP_WIN,d0
+                bra 		\true
+
+
+\touched		jsr 		IsShipHit
+				move.l 		#SHIP_HIT,a0
+				beq 		\true
+				jsr 		IsShipColliding
+				move.l 		#SHIP_COLLIDING,a0
+				beq 		\true
+				jsr 		IsInvaderTooLow
+				move.l 		#INVADER_LOW,a0
+				beq 		\true
+				
+
+
+\false          ; Renvoie false .
+                andi.b #%11111011,ccr
+                bra \quit
+\true           ; Renvoie true.
+                ori.b #%00000100,ccr
+\quit           movem.l (a7)+,d7/a0
+                rts
+
+                
 Main                jsr     InitInvaders
 					jsr     InitInvaderShots
 
@@ -1222,9 +1267,9 @@ Main                jsr     InitInvaders
 					
 					jsr     SpeedInvaderUp
 
-					jsr     IsInvaderTooLow
+					jsr     IsGameOver
 					bne		\loop
-
+					illegal
 
 					; ==============================
 					; Données
