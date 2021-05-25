@@ -728,42 +728,96 @@ PrintInvaders   ; Sauvegarde les registres.
                 rts
 
 
-InitInvaders    ; Sauvegarde les registres.
-                movem.l d1/d2/a0-a2,-(a7)
+InitInvaders ; Sauvegarde les registres.
+                    movem.l d1/d2/a0-a2,-(a7)
 
-                ; 1re ligne d'envahisseurs.
-                move.w InvaderX,d1
-                move.w InvaderY,d2
-                lea Invaders,a0
-				lea     InvaderC1_Bitmap,a1
-				lea     InvaderC2_Bitmap,a2
-                jsr InitInvaderLine
-                
-                ; 2e ligne d'envahisseurs.
-                add.w #32,d2
-                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
-                lea InvaderB_Bitmap,a1
-                jsr InitInvaderLine
-                
-                ; 3e ligne d'envahisseurs.
-                add.w #32,d2
-                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
-                jsr InitInvaderLine
-                
-                ; 4e ligne d'envahisseurs.
-                add.w #32,d2
-                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
-                lea InvaderA_Bitmap,a1
-                jsr InitInvaderLine
-                
-                ; 5e ligne d'envahisseurs.
-                add.w #32,d2
-                adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
-                jsr InitInvaderLine
-                
-                ; Restaure les registres puis sortie.
-                movem.l (a7)+,d1/d2/a0-a2
-                rts
+                    ; 1re ligne d'envahisseurs.
+                    move.w InvaderX,d1
+                    move.w InvaderY,d2
+                    lea Invaders,a0
+                    lea InvaderC1_Bitmap,a1
+                    lea InvaderC2_Bitmap,a2
+                    jsr InitInvaderLine
+
+                    ; 2e ligne d'envahisseurs.
+                    add.w #32,d2
+                    adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                    lea InvaderB1_Bitmap,a1
+                    lea InvaderB2_Bitmap,a2
+                    jsr InitInvaderLine
+                    ; 3e ligne d'envahisseurs.
+                    add.w #32,d2
+                    adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                    jsr InitInvaderLine
+                    ; 4e ligne d'envahisseurs.
+                    add.w #32,d2
+                    adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                    lea InvaderA1_Bitmap,a1
+                    lea InvaderA2_Bitmap,a2
+                    jsr InitInvaderLine
+                    ; 5e ligne d'envahisseurs.
+                    add.w #32,d2
+                    adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
+                    jsr InitInvaderLine
+                    ; Restaure les registres puis sortie.
+                    movem.l (a7)+,d1/d2/a0-a2
+                    rts
+
+
+SwapBitmap ; Échange les contenus de BITMAP1 et BITMAP2.
+                    move.l BITMAP1(a1),-(a7)
+                    move.l BITMAP2(a1),BITMAP1(a1)
+                    move.l (a7)+,BITMAP2(a1)
+                    ; Sortie du sous-programme.
+                    rts
+
+
+
+DestroyInvaders     ; Sauvegarde les regitres.
+                    movem.l d7/a1/a2,-(a7)
+                    ; Fait pointer A1.L sur les envahisseurs.
+                    ; Fait pointer A2.L sur le tir du vaisseau.
+                    lea Invaders,a1
+                    lea ShipShot,a2
+                    ; Nombre d'itérations – 1 (car DBRA) -> D7.W
+                    move.w #INVADER_COUNT-1,d7
+
+\loop               ; Si le tir n'entre pas en collision
+                    ; avec l'envahisseur, on passe au suivant.
+                    jsr IsSpriteColliding
+                    bne \next
+\colliding          ; S'il y a une collision,
+                    ; on efface le tir et l'envahisseur.
+                    ; Puis on décrémente le nombre d'envahisseurs.
+                    move.w #HIDE,STATE(a1)
+                    move.w #HIDE,STATE(a2)
+                    subq.w #1,InvaderCount
+\next               ; Passe à l'envahisseur suivant.
+                    adda.l #SIZE_OF_SPRITE,a1
+                    dbra d7,\loop
+\quit               ; Restaure les registres.
+                    movem.l (a7)+,d7/a1/a2
+                    rts
+
+SpeedInvaderUp      ; Sauvegarde les registres.
+                    movem.l d0/a0,-(a7)
+                    ; Initialise le compteur de vitesse.
+                    clr.w InvaderSpeed
+                    ; Nombre d'envahisseurs en cours d'affichage -> D0.W
+                    move.w InvaderCount,d0
+                    ; Fait pointer A0.L sur le tableau des paliers de vitesse.
+                    lea SpeedLevels,a0
+\loop               ; Incrémente le compteur de vitesse.
+                    addq.w #1,InvaderSpeed
+                    ; Compare le nombre d'envahisseurs à un palier du tableau.
+                    ; Si le nombre d'envahisseurs est plus grand,
+                    ; on passe au palier suivant.
+                    cmp.w (a0)+,d0
+                    bhi \loop
+                    ; Restaure les registres puis sortie.
+                    movem.l (a7)+,d0/a0
+                    rts
+
 
 
 
@@ -1007,6 +1061,62 @@ Ship_Bitmap         dc.w    24,14
                     dc.b    %11111111,%11111111,%11111111
                     dc.b    %11111111,%11111111,%11111111
 
+
+InvaderA2_Bitmap    dc.w 24,16
+                    dc.b %00000000,%11111111,%00000000
+                    dc.b %00000000,%11111111,%00000000
+                    dc.b %00111111,%11111111,%11111100
+                    dc.b %00111111,%11111111,%11111100
+                    dc.b %11111111,%11111111,%11111111
+                    dc.b %11111111,%11111111,%11111111
+                    dc.b %11111100,%00111100,%00111111
+                    dc.b %11111100,%00111100,%00111111
+                    dc.b %11111111,%11111111,%11111111
+                    dc.b %11111111,%11111111,%11111111
+                    dc.b %00001111,%11000011,%11110000
+                    dc.b %00001111,%11000011,%11110000
+                    dc.b %00111100,%00111100,%00111100
+                    dc.b %00111100,%00111100,%00111100
+                    dc.b %00001111,%00000000,%11110000
+                    dc.b %00001111,%00000000,%11110000
+InvaderB1_Bitmap    dc.w 22,16
+; ...
+InvaderB2_Bitmap    dc.w 22,16
+                    dc.b %00001100,%00000000,%11000000
+                    dc.b %00001100,%00000000,%11000000
+                    dc.b %00000011,%00000011,%00000000
+                    dc.b %00000011,%00000011,%00000000
+                    dc.b %11001111,%11111111,%11001100
+                    dc.b %11001111,%11111111,%11001100
+                    dc.b %11001100,%11111100,%11001100
+                    dc.b %11001100,%11111100,%11001100
+                    dc.b %00111111,%11111111,%11110000
+                    dc.b %00111111,%11111111,%11110000
+                    dc.b %00001111,%11111111,%11000000
+                    dc.b %00001111,%11111111,%11000000
+                    dc.b %00001100,%00000000,%11000000
+                    dc.b %00001100,%00000000,%11000000
+                    dc.b %00110000,%00000000,%00110000
+                    dc.b %00110000,%00000000,%00110000
+InvaderC1_Bitmap    dc.w 16,16
+; ...
+InvaderC2_Bitmap    dc.w 16,16
+                    dc.w %0000001111000000
+                    dc.w %0000001111000000
+                    dc.w %0000111111110000
+                    dc.w %0000111111110000
+                    dc.w %0011111111111100
+                    dc.w %0011111111111100
+                    dc.w %1111001111001111
+                    dc.w %1111001111001111
+                    dc.w %1111111111111111
+                    dc.w %1111111111111111
+                    dc.w %0000110000110000
+                    dc.w %0000110000110000
+                    dc.w %0011001111001100
+                    dc.w %0011001111001100
+                    dc.w %1100110000110011
+                    dc.w %1100110000110011
 
 
 
