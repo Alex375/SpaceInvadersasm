@@ -32,9 +32,10 @@ INVADER_X_MIN       equ	0
 INVADER_X_MAX       equ (VIDEO_WIDTH-(INVADER_PER_LINE*32))
 SHIP_STEP           equ 4; Pas du vaisseau
 SHIP_SHOT_STEP      equ 4; Pas d'un tir de vaisseau
+INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
 
 INVADER_SHOT_MAX    equ     5
-InvaderShots        ds.b    SIZE_OF_SPRITE*INVADER_SHOT_MAX
+
 
 
 ; Sprites
@@ -909,24 +910,24 @@ MoveInvaders    ; Décrémente la variable "skip",
 \skip           dc.w 1
 
 
-InitInvaderShots ; Sauvegarde les registres.
-                movem.l d7/a0,-(a7)
-                ; Adresse des tirs -> A0.L
-                lea InvaderShots,a0
-                ; Nombre d'itérations - 1 (car DBRA) -> D7.W
-                move.w #INVADER_SHOT_MAX-1,d7
-\loop           ; Initialise l'état et les bitmaps.
-                move.w #HIDE,STATE(a0)
-                move.l #InvaderShot1_Bitmap,BITMAP1(a0)
-                move.l #InvaderShot2_Bitmap,BITMAP2(a0)
+InitInvaderShots 	; Sauvegarde les registres.
+					movem.l d7/a0,-(a7)
+					; Adresse des tirs -> A0.L
+					lea InvaderShots,a0
+					; Nombre d'itérations - 1 (car DBRA) -> D7.W
+					move.w #INVADER_SHOT_MAX-1,d7
+\loop 	            ; Initialise l'état et les bitmaps.
+					move.w #HIDE,STATE(a0)
+					move.l #InvaderShot1_Bitmap,BITMAP1(a0)
+					move.l #InvaderShot2_Bitmap,BITMAP2(a0)
 
-                ; Passe au tir suivant.
-                adda.l #SIZE_OF_SPRITE,a0
-                dbra d7,\loop
+					; Passe au tir suivant.
+					adda.l #SIZE_OF_SPRITE,a0
+					dbra d7,\loop
 
-                ; Restaure les registres puis sortie.
-                movem.l (a7)+,d7/a0
-                rts
+					; Restaure les registres puis sortie.
+					movem.l (a7)+,d7/a0
+					rts
 
 
 
@@ -1001,14 +1002,29 @@ ConnectInvaderShot ; Sauvegarde les registres.
 
 
 
-Main            lea InvaderShots,a0
-                lea InvaderShot1_Bitmap,a1
-                lea InvaderShot2_Bitmap,a2
-                move.w #INVADER_SHOT_MAX*SIZE_OF_SPRITE-1,d7
-\loop           move.b    #$aa,0(a0,d7.w)
-                dbra d7,\loop
-                jsr InitInvaderShots
+Main                jsr     InitInvaders
+					jsr     InitInvaderShots
 
+\loop               jsr     PrintShip
+					jsr     PrintShipShot
+					jsr     PrintInvaders
+					jsr     PrintInvaderShots
+					
+					jsr     BufferToScreen
+					
+					jsr     DestroyInvaders
+					
+					jsr     MoveShip
+					jsr     MoveInvaders
+					jsr     MoveShipShot
+					jsr     MoveInvaderShots
+
+					jsr     NewShipShot
+					jsr     NewInvaderShot
+					
+					jsr     SpeedInvaderUp
+
+					bra		\loop
 
 
 					; ==============================
@@ -1024,11 +1040,9 @@ FixedSprite         dc.w    SHOW
 					dc.w	228,152
 					dc.l    InvaderA1_Bitmap
 					dc.l	0
-					
-					
-					
-					
-					
+							
+				
+InvaderShots        ds.b    SIZE_OF_SPRITE*INVADER_SHOT_MAX
 					
 					
 					
@@ -1208,6 +1222,14 @@ InvaderC2_Bitmap    dc.w 16,16
                     dc.w %1100110000110011
                     dc.w %1100110000110011
 
+
+ShipShot_Bitmap     dc.w 2,6
+					dc.b	%11000000
+					dc.b	%11000000
+					dc.b	%11000000
+					dc.b 	%11000000
+					dc.b	%11000000	
+					dc.b	%11000000
 
 
 InvaderShot1_Bitmap dc.w 4,6
