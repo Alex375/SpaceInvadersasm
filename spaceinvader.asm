@@ -1082,7 +1082,22 @@ MoveInvaderShots ; Sauvegarde les registres.
                 ; Restaure les registres puis sortie.
                 movem.l (a7)+,a1/d7/d1/d2
                 rts
+SwapInvaderShots ; Sauvegarde les registres.
+                movem.l d7/a1,-(a7)
+                ; Nombre d'itérations = Nombre de tirs d'envahisseurs.
+                ; Nombre d'itérations - 1 (car DBRA) -> D7.W
+                move.w #INVADER_SHOT_MAX-1,d7
 
+                ; Adresse des tirs d'envahisseurs -> A1.L
+                lea InvaderShots,a1
+\loop           ; Échange les bitmaps 1 et 2 pour tous les tirs.
+                jsr SwapBitmap
+                adda.l #SIZE_OF_SPRITE,a1
+                dbra d7,\loop
+
+                ; Restaure les registres puis sortie.
+                movem.l (a7)+,d7/a1
+                rts
 
 Main                jsr     InitInvaders
 					jsr     InitInvaderShots
