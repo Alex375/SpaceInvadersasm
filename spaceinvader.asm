@@ -735,27 +735,32 @@ InitInvaders    ; Sauvegarde les registres.
                 move.w InvaderX,d1
                 move.w InvaderY,d2
                 lea Invaders,a0
-                lea InvaderC_Bitmap,a1
-                lea 0,a2
+				lea     InvaderC1_Bitmap,a1
+				lea     InvaderC2_Bitmap,a2
                 jsr InitInvaderLine
+                
                 ; 2e ligne d'envahisseurs.
                 add.w #32,d2
                 adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
                 lea InvaderB_Bitmap,a1
                 jsr InitInvaderLine
+                
                 ; 3e ligne d'envahisseurs.
                 add.w #32,d2
                 adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
                 jsr InitInvaderLine
+                
                 ; 4e ligne d'envahisseurs.
                 add.w #32,d2
                 adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
                 lea InvaderA_Bitmap,a1
                 jsr InitInvaderLine
+                
                 ; 5e ligne d'envahisseurs.
                 add.w #32,d2
                 adda.l #SIZE_OF_SPRITE*INVADER_PER_LINE,a0
                 jsr InitInvaderLine
+                
                 ; Restaure les registres puis sortie.
                 movem.l (a7)+,d1/d2/a0-a2
                 rts
