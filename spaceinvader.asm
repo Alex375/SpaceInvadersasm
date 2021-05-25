@@ -1198,6 +1198,8 @@ IsInvaderTooLow ; Sauvegarde les registres.
                 ori.b #%00000100,ccr
 \quit           movem.l (a7)+,d7/a0
                 rts
+                
+                
 Main                jsr     InitInvaders
 					jsr     InitInvaderShots
 
@@ -1220,7 +1222,8 @@ Main                jsr     InitInvaders
 					
 					jsr     SpeedInvaderUp
 
-					bra		\loop
+					jsr     IsInvaderTooLow
+					bne		\loop
 
 
 					; ==============================
