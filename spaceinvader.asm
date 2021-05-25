@@ -540,7 +540,9 @@ IsSpriteColliding   ; Sauvegarde les registres.
                     movem.l d1-d4/a0,-(a7)
                     ; Si les sprites ne sont pas visibles, on quitte.
                     ; Le BNE saute si Z = 0, on renvoie donc false.
-                    ; On ne peut pas effectuer un BNE \false tout de suite, ; car ce dernier passe par le nettoyage de la pile. cmp.w #SHOW,STATE(a1)
+                    ; On ne peut pas effectuer un BNE \false tout de suite, 
+                    ; car ce dernier passe par le nettoyage de la pile. 
+                    cmp.w #SHOW,STATE(a1)
                     bne \quit
                     cmp.w #SHOW,STATE(a2)
                     bne \quit
@@ -764,7 +766,7 @@ InitInvaders ; Sauvegarde les registres.
                     rts
 
 
-SwapBitmap ; Échange les contenus de BITMAP1 et BITMAP2.
+SwapBitmap 			; Échange les contenus de BITMAP1 et BITMAP2.
                     move.l BITMAP1(a1),-(a7)
                     move.l BITMAP2(a1),BITMAP1(a1)
                     move.l (a7)+,BITMAP2(a1)
@@ -875,8 +877,7 @@ MoveAllInvaders ; Sauvegarde les registres.
                 jsr     MoveSprite
                 jsr     SwapBitmap
                 
-                ; Déplace l'envahisseur.
-                jsr MoveSprite
+
 \continue       ; Pointe sur le prochain envahisseur.
                 adda.l #SIZE_OF_SPRITE,a1
 
@@ -896,7 +897,7 @@ MoveInvaders    ; Décrémente la variable "skip",
                 bne \quit
                 ; Réinitialise "skip" à sa valeur maximale
                 move.w InvaderSpeed,\skip
-
+				add.w #1,\skip
                 ; Appel de MoveAllInvaders.
                 jsr MoveAllInvaders
 \quit           ; Sortie du sous programme.
@@ -912,10 +913,14 @@ Main                jsr     InitInvaders
 					jsr     PrintShipShot
 					jsr     PrintInvaders
 					jsr     BufferToScreen
+					jsr     DestroyInvaders
 					jsr     MoveShip
 					jsr     MoveInvaders
 					jsr     MoveShipShot
+					
 					jsr     NewShipShot
+					jsr     SpeedInvaderUp
+					
 					bra		\loop
 
 
@@ -926,11 +931,11 @@ Main                jsr     InitInvaders
 					; ------------------------------
 MovingSprite        dc.w    SHOW
 					dc.w    0,152
-					dc.l    InvaderB_Bitmap
+					dc.l    InvaderB1_Bitmap
 					dc.l	0
 FixedSprite         dc.w    SHOW
 					dc.w	228,152
-					dc.l    InvaderA_Bitmap
+					dc.l    InvaderA1_Bitmap
 					dc.l	0
 					
 					
@@ -972,7 +977,7 @@ DOWN_KEY  equ     $472
 
 Invader             dc.w    SHOW                            ; Afficher le sprite
 					dc.w	0,152; X = 0, Y = 152
-					dc.l    InvaderA_Bitmap                 ; Bitmap à afficher
+					dc.l    InvaderA1_Bitmap                 ; Bitmap à afficher
 					dc.l    0
 
 
@@ -991,7 +996,7 @@ SpeedLevels         dc.w  1,5,10,15,20,25,35,50   ; Paliers de vitesse
                 
 
 
-InvaderA_Bitmap     dc.w    24,16
+InvaderA1_Bitmap    dc.w    24,16
                     dc.b    %00000000,%11111111,%00000000
                     dc.b    %00000000,%11111111,%00000000
                     dc.b    %00111111,%11111111,%11111100
@@ -1009,7 +1014,7 @@ InvaderA_Bitmap     dc.w    24,16
                     dc.b    %11110000,%00000000,%00001111
                     dc.b    %11110000,%00000000,%00001111
 
-InvaderB_Bitmap     dc.w    22,16
+InvaderB1_Bitmap     dc.w    22,16
                     dc.b    %00001100,%00000000,%11000000
                     dc.b    %00001100,%00000000,%11000000
                     dc.b    %00000011,%00000011,%00000000
@@ -1027,7 +1032,7 @@ InvaderB_Bitmap     dc.w    22,16
                     dc.b    %00000011,%11001111,%00000000
                     dc.b    %00000011,%11001111,%00000000
 
-InvaderC_Bitmap     dc.w    16,16
+InvaderC1_Bitmap     dc.w    16,16
                     dc.b    %00000011,%11000000
                     dc.b    %00000011,%11000000
                     dc.b    %00001111,%11110000
@@ -1079,8 +1084,7 @@ InvaderA2_Bitmap    dc.w 24,16
                     dc.b %00111100,%00111100,%00111100
                     dc.b %00001111,%00000000,%11110000
                     dc.b %00001111,%00000000,%11110000
-InvaderB1_Bitmap    dc.w 22,16
-; ...
+
 InvaderB2_Bitmap    dc.w 22,16
                     dc.b %00001100,%00000000,%11000000
                     dc.b %00001100,%00000000,%11000000
@@ -1098,8 +1102,7 @@ InvaderB2_Bitmap    dc.w 22,16
                     dc.b %00001100,%00000000,%11000000
                     dc.b %00110000,%00000000,%00110000
                     dc.b %00110000,%00000000,%00110000
-InvaderC1_Bitmap    dc.w 16,16
-; ...
+
 InvaderC2_Bitmap    dc.w 16,16
                     dc.w %0000001111000000
                     dc.w %0000001111000000
