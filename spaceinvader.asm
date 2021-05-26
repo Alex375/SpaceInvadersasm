@@ -34,6 +34,7 @@ SHIP_STEP           equ 4; Pas du vaisseau
 SHIP_SHOT_STEP      equ 4; Pas d'un tir de vaisseau
 INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
 BONUS_INVADER_STEP  equ 4; Pas du invader bonus
+BONUS_POP			equ 6;
 
 INVADER_SHOT_MAX    equ     5
 
@@ -812,7 +813,7 @@ DestroyInvaders     ; Sauvegarde les regitres.
                     rts
 
 SpeedInvaderUp      ; Sauvegarde les registres.
-                    movem.l d0/a0,-(a7)
+                    movem.l d0/a0/a1,-(a7)
                     ; Initialise le compteur de vitesse.
                     clr.w InvaderSpeed
                     ; Nombre d'envahisseurs en cours d'affichage -> D0.W
@@ -827,7 +828,14 @@ SpeedInvaderUp      ; Sauvegarde les registres.
                     cmp.w (a0)+,d0
                     bhi \loop
                     ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d0/a0
+                    lea BonusInvader,a1
+                    cmpi.w  #BONUS_POP,InvaderSpeed
+                    bne \quit
+                    cmpi.w	#0,BonusShowed
+                    bne \quit
+                    move.w #SHOW,STATE(a1)
+                    addq.w #1,BonusShowed
+\quit               movem.l (a7)+,d0/a0/a1
                     rts
 
 
@@ -1251,7 +1259,7 @@ InitBonusInvader	; Sauvegarde les registres.
 	
 					; Initialise tous les champs du sprite.
 					lea 	BonusInvader,a0
-					move.w #SHOW,STATE(a0)
+					move.w #HIDE,STATE(a0)
 					move.w #0,X(a0)
 					move.w #0,Y(a0)
 					move.l #InvaderB1_Bitmap,BITMAP1(a0)
@@ -1291,9 +1299,10 @@ ActMoveBonus		movem.l d1/d2/a1/d7,-(a7)
 					jsr 	IsOutOfScreen
 					
 					cmpi.w 	#VIDEO_WIDTH-32,X(a1)
-					bgt 	\hiding
+					blt 	\continue
+					move.l 	#HIDE,STATE(a1)
 					
-					move.l 	#BONUS_INVADER_STEP,d1
+\continue			move.l 	#BONUS_INVADER_STEP,d1
 					clr.l 	d2
 					
 					; Déplace l'envahisseur et permute ses bitmaps.
@@ -1302,9 +1311,30 @@ ActMoveBonus		movem.l d1/d2/a1/d7,-(a7)
 \quit 	            ; Restaure les registres puis sortie.
 					movem.l (a7)+,d1/d2/a1/d7
 					rts
-\hiding				move.l 	#HIDE,STATE(a1)
-					bra \quit
 
+DestroyBonusInvader	movem.l d7/a1/a2,-(a7)
+                    ; Fait pointer A1.L sur les envahisseurs.
+                    ; Fait pointer A2.L sur le tir du vaisseau.
+                    lea BonusInvader,a1
+                    lea ShipShot,a2
+                    ; Nombre d'itérations – 1 (car DBRA) -> D7.W
+                    move.w #INVADER_COUNT-1,d7
+
+					; Si le tir n'entre pas en collision
+                    ; avec l'envahisseur, on passe au suivant.
+                    jsr IsSpriteColliding
+                    bne \quit
+
+\colliding          ; S'il y a une collision,
+                    ; on efface le tir et l'envahisseur.
+                    ; Puis on décrémente le nombre d'envahisseurs.
+                    move.w #HIDE,STATE(a1)
+                    move.w #HIDE,STATE(a2)
+					
+
+\quit               ; Restaure les registres.
+                    movem.l (a7)+,d7/a1/a2
+                    rts
 
 
 
@@ -1322,7 +1352,7 @@ Main                jsr     InitInvaders
 					jsr     BufferToScreen
 					
 					jsr     DestroyInvaders
-					;jsr	 DestroyBonusInvader
+					jsr		DestroyBonusInvader
 					
 					jsr     MoveShip
 					jsr     MoveInvaders
@@ -1404,6 +1434,7 @@ InvaderCount        dc.w	INVADER_COUNT         ; Cpt. d'envahisseurs
 InvaderSpeed        dc.w    8                                       ; Vitesse (1 -> 8)
 SpeedLevels         dc.w  	1,5,10,15,20,25,35,50   ; Paliers de vitesse
 BonusSpeed 			dc.w 	2
+BonusShowed			dc.w	0
 
                 
 
