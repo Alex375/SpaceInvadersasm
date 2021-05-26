@@ -34,7 +34,8 @@ SHIP_STEP           equ 4; Pas du vaisseau
 SHIP_SHOT_STEP      equ 4; Pas d'un tir de vaisseau
 INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
 BONUS_INVADER_STEP  equ 4; Pas du invader bonus
-BONUS_POP			equ 6;
+BONUS_POP			equ 7;
+BONUS_GAIN			equ	4;Vitesse gagner grace au bonus
 
 INVADER_SHOT_MAX    equ     5
 
@@ -639,7 +640,7 @@ PrintShipShot       ; Sauvegarde les registres.
                     rts
 
 MoveShipShot        ; Sauvegarde les registres.
-                    movem.l a1/d1/d2,-(a7)
+                    movem.l a1/d1/d2/d3,-(a7)
                     ; Adresse du sprite de tir -> A1.L
                     lea     ShipShot,a1
                     ; Si le tir n'est pas affiché, on ne fait rien.
@@ -649,13 +650,15 @@ MoveShipShot        ; Sauvegarde les registres.
                     ; Si le déplacement a eu lieu, on peut quitter. 
                     clr.w d1
                     move.w #-SHIP_SHOT_STEP,d2
+                    move BonusStepReal,d3
+                    add.w d3,d2
                     jsr MoveSprite
                     beq \quit
 \outOfScreen        ; Sinon, le tir sort de l'écran. 
                     ; Il faut alors le camoufler. 
                     move.w #HIDE,STATE(a1)
 \quit               ; Restaure les registres puis sortie.
-                    movem.l (a7)+,a1/d1/d2
+                    movem.l (a7)+,a1/d1/d2/d3
                     rts
 
 
@@ -830,7 +833,7 @@ SpeedInvaderUp      ; Sauvegarde les registres.
                     ; Restaure les registres puis sortie.
                     lea BonusInvader,a1
                     cmpi.w  #BONUS_POP,InvaderSpeed
-                    bne \quit
+                    bge \quit
                     cmpi.w	#0,BonusShowed
                     bne \quit
                     move.w #SHOW,STATE(a1)
@@ -1330,7 +1333,7 @@ DestroyBonusInvader	movem.l d7/a1/a2,-(a7)
                     ; Puis on décrémente le nombre d'envahisseurs.
                     move.w #HIDE,STATE(a1)
                     move.w #HIDE,STATE(a2)
-					
+					move.w #-BONUS_GAIN,BonusStepReal
 
 \quit               ; Restaure les registres.
                     movem.l (a7)+,d7/a1/a2
@@ -1368,8 +1371,8 @@ Main                jsr     InitInvaders
 
 					jsr     IsGameOver
 					bne		\loop
-					jsr PrintShip
-					jsr BufferToScreen
+					jsr 	PrintShip
+					jsr 	BufferToScreen
 					illegal
 
 					; ==============================
@@ -1435,6 +1438,7 @@ InvaderSpeed        dc.w    8                                       ; Vitesse (1
 SpeedLevels         dc.w  	1,5,10,15,20,25,35,50   ; Paliers de vitesse
 BonusSpeed 			dc.w 	2
 BonusShowed			dc.w	0
+BonusStepReal		dc.w	0
 
                 
 
