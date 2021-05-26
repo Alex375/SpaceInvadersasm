@@ -1283,26 +1283,27 @@ MoveBonusInvader; Décrémente la variable "skip",
 					
 ActMoveBonus		movem.l d1/d2/a1/d7,-(a7)
 
-					lea BonusInvader,a1
+					lea 	BonusInvader,a1
 
-					cmp.w #HIDE,STATE(a1)
-					beq \quit
+					cmp.w 	#HIDE,STATE(a1)
+					beq 	\quit
 					
-					jsr IsOutOfScreen
+					jsr 	IsOutOfScreen
 					
-					cmpi.w #VIDEO_WIDTH,X(a1)
-					bgt \hiding
+					cmpi.w 	#VIDEO_WIDTH-32,X(a1)
+					bgt 	\hiding
 					
-					move.l #BONUS_INVADER_STEP,d1
-					clr.l d2
+					move.l 	#BONUS_INVADER_STEP,d1
+					clr.l 	d2
 					
 					; Déplace l'envahisseur et permute ses bitmaps.
 					jsr     MoveSprite
 					jsr     SwapBitmap
-\hiding				move.l #HIDE,STATE(a1)
 \quit 	            ; Restaure les registres puis sortie.
 					movem.l (a7)+,d1/d2/a1/d7
 					rts
+\hiding				move.l 	#HIDE,STATE(a1)
+					bra \quit
 
 
 
