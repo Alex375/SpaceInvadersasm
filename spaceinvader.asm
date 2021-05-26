@@ -33,6 +33,7 @@ INVADER_X_MAX       equ (VIDEO_WIDTH-(INVADER_PER_LINE*32))
 SHIP_STEP           equ 4; Pas du vaisseau
 SHIP_SHOT_STEP      equ 4; Pas d'un tir de vaisseau
 INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
+BONUS_INVADER_STEP  equ 4; Pas du invader bonus
 
 INVADER_SHOT_MAX    equ     5
 
@@ -361,7 +362,7 @@ PrintBitmap			; Sauvegarde les registres.
 					
 					; Adresse vidéo -> A1.L
 					; Décalage -> D0.W
-					jsr       PixelToAddress
+					jsr     PixelToAddress
 					
 					; Copie la matrice de points du bitmap dans la mémoire vidéo.
 					jsr     CopyBitmap
@@ -1244,31 +1245,100 @@ IsGameOver		movem.l d7/a0,-(a7)
 \quit           movem.l (a7)+,d7/a0
                 rts
 
+InitBonusInvader	; Sauvegarde les registres.
+					movem.l d7/a0,-(a7)
+
+	
+					; Initialise tous les champs du sprite.
+					lea 	BonusInvader,a0
+					move.w #SHOW,STATE(a0)
+					move.w #0,X(a0)
+					move.w #0,Y(a0)
+					move.l #InvaderB1_Bitmap,BITMAP1(a0)
+					move.l #InvaderB2_Bitmap,BITMAP2(a0)
+					movem.l (a7)+,d7/a0
+					rts
+					
+PrintBonusInvader	movem.l d7/a1,-(a7)
+					lea		BonusInvader,a1
+					jsr		PrintSprite
+					movem.l (a7)+,d7/a1
+					rts
+				
+
+MoveBonusInvader; Décrémente la variable "skip",
+                ; et ne fait rien si elle n'est pas nulle.
+                subq.w #1,\skip
+                bne \quit
+                ; Réinitialise "skip" à sa valeur maximale
+                move.w BonusSpeed,\skip
+				add.w #1,\skip
+                ; Appel de MoveAllInvaders.
+                jsr ActMoveBonus
+\quit           ; Sortie du sous programme.
+                rts
+                ; Compteur d'affichage des envahisseurs
+\skip           dc.w 1
+					
+					
+ActMoveBonus		movem.l d1/d2/a1/d7,-(a7)
+
+					lea BonusInvader,a1
+
+					cmp.w #HIDE,STATE(a1)
+					beq \quit
+					
+					jsr IsOutOfScreen
+					
+					cmpi.w #VIDEO_WIDTH,X(a1)
+					bgt \hiding
+					
+					move.l #BONUS_INVADER_STEP,d1
+					clr.l d2
+					
+					; Déplace l'envahisseur et permute ses bitmaps.
+					jsr     MoveSprite
+					jsr     SwapBitmap
+\hiding				move.l #HIDE,STATE(a1)
+\quit 	            ; Restaure les registres puis sortie.
+					movem.l (a7)+,d1/d2/a1/d7
+					rts
+
+
+
+
                 
 Main                jsr     InitInvaders
 					jsr     InitInvaderShots
+					jsr 	InitBonusInvader
 
 \loop               jsr     PrintShip
 					jsr     PrintShipShot
 					jsr     PrintInvaders
+					jsr	 	PrintBonusInvader
 					jsr     PrintInvaderShots
 					
 					jsr     BufferToScreen
 					
 					jsr     DestroyInvaders
+					;jsr	 DestroyBonusInvader
 					
 					jsr     MoveShip
 					jsr     MoveInvaders
 					jsr     MoveShipShot
 					jsr     MoveInvaderShots
+					jsr		MoveBonusInvader
 
 					jsr     NewShipShot
 					jsr     NewInvaderShot
 					
 					jsr     SpeedInvaderUp
 
+
 					jsr     IsGameOver
 					bne		\loop
+					jsr PrintShip
+					jsr BufferToScreen
 					illegal
 
 					; ==============================
@@ -1296,7 +1366,7 @@ InvaderShots        ds.b    SIZE_OF_SPRITE*INVADER_SHOT_MAX
                     ; ==============================
 
 Invaders            ds.b    INVADER_COUNT*SIZE_OF_SPRITE
-
+BonusInvader		ds.b	SIZE_OF_SPRITE
 
 Ship 				dc.w    SHOW
 					dc.w	(VIDEO_WIDTH-24)/2,VIDEO_HEIGHT-32
@@ -1326,12 +1396,13 @@ Invader             dc.w    SHOW                            ; Afficher le sprite
 
 
                
-InvaderX            dc.w (VIDEO_WIDTH-(INVADER_PER_LINE*32))/2; Abscisse globale
-InvaderY            dc.w 32; Ordonnée global
+InvaderX            dc.w 	(VIDEO_WIDTH-(INVADER_PER_LINE*32))/2; Abscisse globale
+InvaderY            dc.w 	32; Ordonnée global
 InvaderCurrentStep  dc.w    INVADER_STEP_X 
 InvaderCount        dc.w	INVADER_COUNT         ; Cpt. d'envahisseurs
 InvaderSpeed        dc.w    8                                       ; Vitesse (1 -> 8)
-SpeedLevels         dc.w  1,5,10,15,20,25,35,50   ; Paliers de vitesse
+SpeedLevels         dc.w  	1,5,10,15,20,25,35,50   ; Paliers de vitesse
+BonusSpeed 			dc.w 	2
 
                 
 
@@ -1462,7 +1533,7 @@ InvaderC2_Bitmap    dc.w 16,16
                     dc.w %1100110000110011
 
 
-ShipShot_Bitmap     dc.w 2,6
+ShipShot_Bitmap     dc.w 	2,6
 					dc.b	%11000000
 					dc.b	%11000000
 					dc.b	%11000000
