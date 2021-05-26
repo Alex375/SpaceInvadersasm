@@ -833,7 +833,7 @@ SpeedInvaderUp      ; Sauvegarde les registres.
                     ; Restaure les registres puis sortie.
                     lea BonusInvader,a1
                     cmpi.w  #BONUS_POP,InvaderSpeed
-                    bge \quit
+                    bgt \quit
                     cmpi.w	#0,BonusShowed
                     bne \quit
                     move.w #SHOW,STATE(a1)
