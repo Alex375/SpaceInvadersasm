@@ -1117,8 +1117,8 @@ InitBonusInvader	; Sauvegarde les registres.
 					move.w #HIDE,STATE(a0)
 					move.w #0,X(a0)
 					move.w #0,Y(a0)
-					move.l #InvaderB1_Bitmap,BITMAP1(a0)
-					move.l #InvaderB2_Bitmap,BITMAP2(a0)
+					move.l #BonusIvader_Bitmap1,BITMAP1(a0)
+					move.l #BonusIvader_Bitmap2,BITMAP2(a0)
 					movem.l (a7)+,d7/a0
 					rts
 					
@@ -1276,6 +1276,7 @@ InvaderCurrentStep  dc.w    INVADER_STEP_X
 InvaderCount        dc.w	INVADER_COUNT         					; Cpt. d'envahisseurs
 InvaderSpeed        dc.w    8                                       ; Vitesse (1 -> 8)
 SpeedLevels         dc.w  	1,5,10,15,20,25,35,50   				; Paliers de vitesse
+
 BonusSpeed 			dc.w 	5										; Vitesse de l'envahisseur bonus
 BonusShowed			dc.w	0										; =1 si bonus affiche
 BonusStepReal		dc.w	0										; Pas aditionel grace au bonus
@@ -1407,6 +1408,37 @@ InvaderC2_Bitmap    dc.w 16,16
                     dc.w %0011001111001100
                     dc.w %1100110000110011
                     dc.w %1100110000110011
+                    
+BonusIvader_Bitmap1 dc.w    22,13
+                    dc.b    %00000000,%00000000,%00000000
+                    dc.b    %00000000,%11111111,%00000000
+                    dc.b    %00000011,%11111111,%11000000
+                    dc.b    %00001111,%11111111,%11110000
+                    dc.b    %00110011,%11100111,%11001100
+                    dc.b    %11110011,%11100111,%11001111
+                    dc.b    %00111110,%01111110,%01111100
+                    dc.b    %00011100,%00111100,%00111000
+                    dc.b    %00001000,%00011000,%00010000
+                    dc.b    %00001000,%00011000,%00010000
+                    dc.b    %00001000,%00011000,%00010000
+                    dc.b    %00011100,%00111100,%00111000
+                    dc.b    %00000000,%00000000,%00000000
+                    
+BonusIvader_Bitmap2 dc.w    22,13
+                    dc.b    %00000000,%00000000,%00000000
+                    dc.b    %00000000,%11111111,%00000000
+                    dc.b    %00000011,%11111111,%11000000
+                    dc.b    %00001111,%11111111,%11110000
+                    dc.b    %00110011,%11100111,%11001100
+                    dc.b    %11110011,%11100111,%11001111
+                    dc.b    %00111110,%01111110,%01111100
+                    dc.b    %00011100,%00111100,%00111000
+                    dc.b    %00001000,%00011000,%00010000
+                    dc.b    %00011100,%00111100,%00111000
+                    dc.b    %00000000,%00000000,%00000000
+                    dc.b    %00000000,%00000000,%00000000
+                    dc.b    %00000000,%00000000,%00000000
+
 
 
 ShipShot_Bitmap     dc.w 	2,6
