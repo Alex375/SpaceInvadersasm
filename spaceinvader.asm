@@ -1,9 +1,9 @@
 ; ==============================
-                    ; DÃ©finition des constantes
-                    ; ==============================
+; Definition des constantes
+; ==============================
 
-                    ; MÃ©moire vidÃ©o
-                    ; ------------------------------
+; Memoire video
+; ------------------------------
 
 VIDEO_START         equ     $ffb500                         ; Adresse de dÃ©part
 VIDEO_WIDTH         equ     480                             ; Largeur en pixels
@@ -12,8 +12,8 @@ VIDEO_SIZE          equ     (VIDEO_WIDTH*VIDEO_HEIGHT/8)    ; Taille en octets
 BYTE_PER_LINE       equ     (VIDEO_WIDTH/8)                 ; Nombre d'octets par ligne
 VIDEO_BUFFER        equ     (VIDEO_START-VIDEO_SIZE)		; Tampon vidéo
 
-                    ; Bitmaps
-                    ; ------------------------------
+; Bitmaps
+; ------------------------------
 
 WIDTH               equ     0                               ; Largeur en pixels
 HEIGHT              equ     2                               ; Hauteur en pixels
@@ -21,8 +21,6 @@ MATRIX              equ     4                               ; Matrice de points
 
 ; Envahisseurs
 ; ------------------------------
-
-
 INVADER_PER_LINE    equ		10
 INVADER_PER_COLUMN  equ		5
 INVADER_COUNT       equ     INVADER_PER_LINE*INVADER_PER_COLUMN
@@ -30,20 +28,30 @@ INVADER_STEP_X      equ	4
 INVADER_STEP_Y      equ	8
 INVADER_X_MIN       equ	0
 INVADER_X_MAX       equ (VIDEO_WIDTH-(INVADER_PER_LINE*32))
+INVADER_SHOT_MAX    equ     5
+
+; Ship
+; ------------------------------
 SHIP_STEP           equ 4; Pas du vaisseau
 SHIP_SHOT_STEP      equ 4; Pas d'un tir de vaisseau
 INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
-BONUS_INVADER_STEP  equ 4; Pas du invader bonus
-BONUS_POP			equ 7;
-BONUS_GAIN			equ	4;Vitesse gagner grace au bonus
-
-INVADER_SHOT_MAX    equ     5
 
 
+; Bonus
+; ------------------------------
+BONUS_INVADER_STEP  equ 3	; Pas du invader bonus
+BONUS_GAIN			equ	4	; Vitesse gagner grace au bonus
+BONUS_POP			equ 7	; Niveau de spawn du bonus
+BONUS_STOP			equ 3	; Niveau de stop de la vitesse bonus
+
+
+
+; Jeux
+; ------------------------------
 SHIP_WIN 			equ 1
 SHIP_HIT 			equ 3
 SHIP_COLLIDING 		equ 45
-INVADER_LOW 		equ 100
+INVADER_LOW 		equ 30
 
 
 ; Sprites
@@ -56,26 +64,27 @@ BITMAP2             equ 10; Bitmap no 2
 HIDE                equ 0; Ne pas afficher le sprite
 SHOW                equ 1; Afficher le sprite
 SIZE_OF_SPRITE      equ 14; Taille d'un sprite en octets
-                    ; ==============================
-                    ; Initialisation des vecteurs
-                    ; ==============================
 
+
+; ==============================
+; Initialisation des vecteurs
+; ==============================
                     org     $0
 
 vector_000          dc.l    VIDEO_BUFFER                    ; Valeur initiale de A7
 vector_001          dc.l    Main                            ; Valeur initiale du PC
 
-                    ; ==============================
-                    ; Programme principal
-                    ; ==============================
+; ==============================
+; Programme principal
+; ==============================
 
                     org     $500
 
 
                     
-                    ; ==============================
-                    ; Sous-programmes
-                    ; ==============================
+; ==============================
+; Sous-programmes
+; ==============================
 
 PixelToByte         ; Taille en pixels + 7 -> D3.W
                     addq.w  #7,d3
@@ -143,169 +152,7 @@ FillScreen          ; Sauvegarde les registres dans la pile.
 
 
 
-HLines              ; Sauvegarde les registres dans la pile.
-                    movem.l d6/d7/a0,-(a7)
-                    ; Fait pointer A0 sur la mémoire vidéo.
-                    lea     VIDEO_START,a0
-                    ; D7.W = Compteur de boucle
-                    ; = Nombre d'itérations - 1 (car DBRA).
-                    ; ------------------------------
-                    ; Nombre d'itérations = Nombre de rayures blanches et noires
-                    ; Hauteur d'un rayure blanche = 8 pixels
-                    ; Hauteur d'un rayure noire = 8 pixels
-                    ; Nombre de rayures blanches et noires = Hauteur de la fenêtre / 2x8 
-                    move.l #VIDEO_HEIGHT/16-1,d7
 
-\loop               ; Dessine une rayure blanche (8 lignes blanches).
-                    ; ------------------------------
-                    ; D6.W = Compteur de boucles
-                    ;      = Nombre d'itérations - 1 (car DBRA)
-                    ; ------------------------------
-                    ; Nombre d'itérations = Nombre de mots longs
-                    ; Nombre de mots longs = Nombre d'octets / 4
-                    ; Nombre d'octets = BYTE_PER_LINE x Hauteur d'une rayure blanche ; Hauteur d'une ligne = 8 pixels
-                    move.w #BYTE_PER_LINE*8/4-1,d6
-
-
-
-\white_loop         move.l #$ffffffff,(a0)+
-                    dbra d6,\white_loop
-
-                    ; Dessine une rayure noire (8 lignes noires).
-                    move.w  #BYTE_PER_LINE*8/4-1,d6
-
-\black_loop         clr.l   (a0)+
-                    dbra    d6,\black_loop
-                    ; Reboucle tant qu'il reste des rayures ; blanches et noires à dessiner.
-                    dbra d7,\loop
-                    ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d6/d7/a0
-                    rts
-
-
-
-WhiteSquare32       ; Sauvegarde les registres dans la pile.
-                    movem.l d7/a0,-(a7)
-                    ; Fait pointer A0 sur l'emplacement du carré.
-                    ; ------------------------------
-                    ; Centrage horizontal :
-                    ; La largeur ci-dessous est mesurée en octets.
-                    ; Largeur totale = Largeur de la fenêtre = BYTE_PER_LINE
-                    ; Largeur du carré = 4 octets (32 pixels)
-                    ; Déplacement horizontal en octets
-                    ; = (Largeur totale - Largeur du carré) / 2
-                    ; ------------------------------
-                    ; Centrage vertical :
-                    ; La hauteur ci-dessous est mesurée en pixels.
-                    ; Hauteur totale = Hauteur de la fenêtre = VIDEO_HEIGHT
-                    ; Hauteur du carré = 32 pixels
-                    ; Déplacement vertical en pixels
-                    ; = (Hauteur totale - Hauteur du carré) / 2
-                    ; Déplacement vertical en octets
-                    ; = Déplacement vertical en pixels x BYTE_PER_LINE
-                    ; ------------------------------
-                    ; Adresse du carré
-                    ; = VIDEO_START + (Déplacement horizontal) + (Déplacement vertical) 
-                    lea VIDEO_START+((BYTE_PER_LINE-4)/2)+(((VIDEO_HEIGHT-32)/2)*BYTE_PER_LINE),a0
-                    ; Initialisation du compteur de boucle (D7.W).
-                    ; Nombre d'itérations = Nombre de lignes du carré (32). 
-                    ; D7.W = Nombre d'itération - 1 (car DBRA).
-                    move.w #32-1,d7
-\loop               ; Copie 32 pixels blancs dans la mémoire vidéo 
-                    ; et passe à l'adresse suivante.
-                    move.l #$ffffffff,(a0)
-                    adda.l #BYTE_PER_LINE,a0
-                    dbra    d7,\loop
-                    ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d7/a0
-                    rts
-
-WhiteSquare128      ; Sauvegarde les registres dans la pile.
-                    movem.l d7/a0,-(a7)
-                    ; Fait pointer A0 sur l'emplacement du carré.
-                    ; ------------------------------
-                    ; Centrage horizontal :
-                    ; La largeur ci-dessous est mesurée en octets.
-                    ; Largeur totale = Largeur de la fenêtre = BYTE_PER_LINE
-                    ; Largeur du carré = 16 octets (128 pixels)
-                    ; Déplacement horizontal en octets
-                    ; = (Largeur totale - Largeur du carré) / 2
-                    ; ------------------------------
-                    ; Centrage vertical :
-                    ; La hauteur ci-dessous est mesurée en pixels.
-                    ; Hauteur totale = Hauteur de la fenêtre = VIDEO_HEIGHT
-                    ; Hauteur du carré = 128 pixels
-                    ; Déplacement vertical en pixels
-                    ; = (Hauteur totale - Hauteur du carré) / 2
-                    ; Déplacement vertical en octets
-                    ; = Déplacement vertical en pixels x BYTE_PER_LINE
-                    ; ------------------------------
-                    ; Adresse du carré
-                    ; = VIDEO_START + (Déplacement horizontal) + (Déplacement vertical) 
-                    lea VIDEO_START+((BYTE_PER_LINE-16)/2)+(((VIDEO_HEIGHT-128)/2)*BYTE_PER_LINE),a0
-                    ; Initialisation du compteur de boucle (D7.W).
-                    ; Nombre d'itérations = Nombre de lignes du carré (128). ; D7.W = Nombre d'itération - 1 (car DBRA).
-                    move.w #128-1,d7
-
-\loop               ; Copie 128 pixels blancs dans la mémoire vidéo ; et passe à l'adresse suivante.
-                    move.l #$ffffffff,(a0)
-                    move.l #$ffffffff,4(a0)
-                    move.l #$ffffffff,8(a0)
-                    move.l #$ffffffff,12(a0)
-                    adda.l #BYTE_PER_LINE,a0
-                    dbra   d7,\loop
-                    ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d7/a0
-                    rts
- 
-
-WhiteLine           ; Sauvegarde les registres dans la pile.
-                    movem.l d0/a0,-(a7)
-                    ; Nombre d'itérations = Taille de la ligne en octets 
-                    ; D0.W = Nombre d'itérations - 1 (car DBRA)
-                    subq.w #1,d0
-
-\loop               ; Copie 8 pixels blancs et passe à l'adresse suivante.
-                    move.b  #$ff,(a0)+
-                    dbra    d0,\loop
-                    ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d0/a0
-                    rts
-
-
-WhiteSquare         ; Sauvegarde les registres dans la pile.
-                    movem.l d0-d2/a0,-(a7)
-                    ; D2.W = Taille en pixels du carré.
-                    move.w  d0,d2
-                    lsl.w   #3,d2
-                    ; Fait pointer A0 sur la mémoire vidéo.
-                    lea     VIDEO_START,a0
-                    ; Centre horizontalement.
-                    ; A0 + (Largeur totale - largeur carré) / 2 
-                    move.w #BYTE_PER_LINE,d1
-                    sub.w d0,d1
-                    lsr.w #1,d1
-                    adda.w d1,a0
-                    ; Centre verticalement.
-                    ; A0 + ((Hauteur totale - Hauteur carré) / 2) * BYTE_PER_LINE 
-                    move.w #VIDEO_HEIGHT,d1
-                    sub.w d2,d1
-                    lsr.w #1,d1
-                    mulu.w #BYTE_PER_LINE,d1
-                    adda.w d1,a0
-                    ; Nombre d'itérations = Taille en pixels
-                    ; D2.W = Nombre d'itérations - 1 (car DBRA) 
-                    subq.w #1,d2
-
-
-\loop               ; Affiche la ligne en cours et passe à la ligne suivante.
-                    jsr     WhiteLine
-                    adda.l  #BYTE_PER_LINE,a0
-                    dbra    d2,\loop
-                    ; Restaure les registres puis sortie.
-                    movem.l (a7)+,d0-d2/a0
-                    rts
-                    
 CopyLine           	; Sauvegarde les registres.
 					movem.l d1-d4/a1,-(a7)
 					
@@ -820,7 +667,7 @@ SpeedInvaderUp      ; Sauvegarde les registres.
                     ; Initialise le compteur de vitesse.
                     clr.w InvaderSpeed
                     ; Nombre d'envahisseurs en cours d'affichage -> D0.W
-                    move.w InvaderCount,d0
+                    move.w  InvaderCount,d0
                     ; Fait pointer A0.L sur le tableau des paliers de vitesse.
                     lea SpeedLevels,a0
 \loop               ; Incrémente le compteur de vitesse.
@@ -833,11 +680,14 @@ SpeedInvaderUp      ; Sauvegarde les registres.
                     ; Restaure les registres puis sortie.
                     lea BonusInvader,a1
                     cmpi.w  #BONUS_POP,InvaderSpeed
-                    bgt \quit
+                    bgt \continue
                     cmpi.w	#0,BonusShowed
-                    bne \quit
+                    bne \continue
                     move.w #SHOW,STATE(a1)
                     addq.w #1,BonusShowed
+\continue            cmpi.w	#BONUS_STOP,InvaderSpeed
+                    bgt \quit
+                    clr.w BonusStepReal
 \quit               movem.l (a7)+,d0/a0/a1
                     rts
 
@@ -1099,6 +949,8 @@ MoveInvaderShots ; Sauvegarde les registres.
                 ; Restaure les registres puis sortie.
                 movem.l (a7)+,a1/d7/d1/d2
                 rts
+                
+                
 SwapInvaderShots ; Décrémente la variable \skip,
                 ; et ne fait rien si elle n'est pas nulle.
                 subq.w #1,\skip
@@ -1299,8 +1151,6 @@ ActMoveBonus		movem.l d1/d2/a1/d7,-(a7)
 					cmp.w 	#HIDE,STATE(a1)
 					beq 	\quit
 					
-					jsr 	IsOutOfScreen
-					
 					cmpi.w 	#VIDEO_WIDTH-32,X(a1)
 					blt 	\continue
 					move.l 	#HIDE,STATE(a1)
@@ -1375,41 +1225,33 @@ Main                jsr     InitInvaders
 					jsr 	BufferToScreen
 					illegal
 
-					; ==============================
-					; Données
-					; ==============================
-					; Sprites
-					; ------------------------------
-MovingSprite        dc.w    SHOW
-					dc.w    0,152
-					dc.l    InvaderB1_Bitmap
-					dc.l	0
-FixedSprite         dc.w    SHOW
-					dc.w	228,152
-					dc.l    InvaderA1_Bitmap
-					dc.l	0
-							
-				
+; ==============================
+; Données
+; ==============================
+; Sprites
+; ------------------------------
+										
 InvaderShots        ds.b    SIZE_OF_SPRITE*INVADER_SHOT_MAX
-					
-					
-					
-					
-					; ==============================
-                    ; DonnÃ©es
-                    ; ==============================
 
 Invaders            ds.b    INVADER_COUNT*SIZE_OF_SPRITE
+
 BonusInvader		ds.b	SIZE_OF_SPRITE
 
 Ship 				dc.w    SHOW
 					dc.w	(VIDEO_WIDTH-24)/2,VIDEO_HEIGHT-32
 					dc.l    Ship_Bitmap
 					dc.l	0
+
 ShipShot 			dc.w    HIDE
 					dc.w	0,0
 					dc.l    ShipShot_Bitmap
 					dc.l	0
+					
+Invader             dc.w    SHOW                            ; Afficher le sprite
+					dc.w	0,152							; X = 0, Y = 152
+					dc.l    InvaderA1_Bitmap                ; Bitmap à afficher
+					dc.l    0
+
 
 ; Touches du clavier
 ; ------------------------------
@@ -1419,26 +1261,24 @@ UP_KEY    equ     $470
 RIGHT_KEY equ     $471
 DOWN_KEY  equ     $472
 
-Invader             dc.w    SHOW                            ; Afficher le sprite
-					dc.w	0,152; X = 0, Y = 152
-					dc.l    InvaderA1_Bitmap                 ; Bitmap à afficher
-					dc.l    0
 
 
 
 
 
 
-               
-InvaderX            dc.w 	(VIDEO_WIDTH-(INVADER_PER_LINE*32))/2; Abscisse globale
-InvaderY            dc.w 	32; Ordonnée global
+
+; Varibales globales
+; ------------------------------      
+InvaderX            dc.w 	(VIDEO_WIDTH-(INVADER_PER_LINE*32))/2	; Abscisse globale
+InvaderY            dc.w 	32										; Ordonnée global
 InvaderCurrentStep  dc.w    INVADER_STEP_X 
-InvaderCount        dc.w	INVADER_COUNT         ; Cpt. d'envahisseurs
+InvaderCount        dc.w	INVADER_COUNT         					; Cpt. d'envahisseurs
 InvaderSpeed        dc.w    8                                       ; Vitesse (1 -> 8)
-SpeedLevels         dc.w  	1,5,10,15,20,25,35,50   ; Paliers de vitesse
-BonusSpeed 			dc.w 	2
-BonusShowed			dc.w	0
-BonusStepReal		dc.w	0
+SpeedLevels         dc.w  	1,5,10,15,20,25,35,50   				; Paliers de vitesse
+BonusSpeed 			dc.w 	5										; Vitesse de l'envahisseur bonus
+BonusShowed			dc.w	0										; =1 si bonus affiche
+BonusStepReal		dc.w	0										; Pas aditionel grace au bonus
 
                 
 
