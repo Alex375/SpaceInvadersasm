@@ -41,8 +41,8 @@ INVADER_SHOT_STEP   equ 1; Pas d'un tir d'envahisseur
 ; ------------------------------
 BONUS_INVADER_STEP  equ 3	; Pas du invader bonus
 BONUS_GAIN			equ	4	; Vitesse gagner grace au bonus
-BONUS_POP			equ 7	; Niveau de spawn du bonus
-BONUS_STOP			equ 3	; Niveau de stop de la vitesse bonus
+BONUS_POP			equ 30	; Nombre dinvader pour le spawn du bonus
+BONUS_STOP			equ 10	; Nombre dinvader pour la fin de la vitesse bonus
 
 
 
@@ -678,16 +678,6 @@ SpeedInvaderUp      ; Sauvegarde les registres.
                     cmp.w (a0)+,d0
                     bhi \loop
                     ; Restaure les registres puis sortie.
-                    lea BonusInvader,a1
-                    cmpi.w  #BONUS_POP,InvaderSpeed
-                    bgt \continue
-                    cmpi.w	#0,BonusShowed
-                    bne \continue
-                    move.w #SHOW,STATE(a1)
-                    addq.w #1,BonusShowed
-\continue            cmpi.w	#BONUS_STOP,InvaderSpeed
-                    bgt \quit
-                    clr.w BonusStepReal
 \quit               movem.l (a7)+,d0/a0/a1
                     rts
 
@@ -1189,7 +1179,21 @@ DestroyBonusInvader	movem.l d7/a1/a2,-(a7)
                     movem.l (a7)+,d7/a1/a2
                     rts
 
-
+SpawnBonus			movem.l a1/d0,-(a7)
+					lea BonusInvader,a1
+					move.w InvaderCount,d0
+                    cmpi.w  #BONUS_POP,d0
+                    bgt \continue
+                    cmpi.w	#0,BonusShowed
+                    bne \continue
+                    move.w #SHOW,STATE(a1)
+                    addq.w #1,BonusShowed
+\continue           cmpi.w	#BONUS_STOP,d0
+                    bgt \quit
+                    clr.w BonusStepReal
+\quit				movem.l (a7)+,a1/d0
+					rts
+                    
 
                 
 Main                jsr     InitInvaders
@@ -1217,6 +1221,7 @@ Main                jsr     InitInvaders
 					jsr     NewInvaderShot
 					
 					jsr     SpeedInvaderUp
+					jsr		SpawnBonus
 
 
 					jsr     IsGameOver
