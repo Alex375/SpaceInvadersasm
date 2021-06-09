@@ -74,6 +74,8 @@ SIZE_OF_SPRITE      equ 14; Taille d'un sprite en octets
 vector_000          dc.l    VIDEO_BUFFER                    ; Valeur initiale de A7
 vector_001          dc.l    Main                            ; Valeur initiale du PC
 
+PrintChar           incbin "PrintChar.bin"   
+
 ; ==============================
 ; Programme principal
 ; ==============================
@@ -1057,7 +1059,27 @@ IsInvaderTooLow ; Sauvegarde les registres.
                 ori.b #%00000100,ccr
 \quit           movem.l (a7)+,d7/a0
                 rts
-                
+       
+
+Print           	; Sauvegarde les registres dans la pile.
+                    movem.l d0/d1/a0,-(a7)
+\loop           
+                    ; Charge un caractère de la chaîne dans D0.
+                    ; Si le caractère est nul, il s'agit de la fin de la chaîne.
+                    ; On peut sortir du sous-programme.
+                    move.b (a0)+,d0
+                    beq  \quit
+                    ; Affiche le caractère.
+                    jsr     PrintChar
+                    ; Incrémente la colonne d'affichage du caractère,
+                    ; et reboucle.
+                    addq.b #1,d1
+                    bra  \loop
+\quit           	; Restaure les registres puis sortie.
+                    movem.l (a7)+,d0/d1/a0
+                    rts
+
+         
                 
                 
 IsGameOver		movem.l d7/a0,-(a7)
@@ -1226,9 +1248,19 @@ Main                jsr     InitInvaders
 
 					jsr     IsGameOver
 					bne		\loop
-					jsr 	PrintShip
-					jsr 	BufferToScreen
-					illegal
+					
+                    lea     win,a0
+                    cmp.l    #SHIP_WIN,d0
+                    beq        \print
+                    lea        lose,a0
+            
+
+\print              move.b #20,d1
+                    move.b #39,d2
+                    jsr     Print
+                    
+                    illegal
+
 
 ; ==============================
 ; Données
@@ -1286,6 +1318,11 @@ BonusSpeed 			dc.w 	5										; Vitesse de l'envahisseur bonus
 BonusShowed			dc.w	0										; =1 si bonus affiche
 BonusStepReal		dc.w	0										; Pas aditionel grace au bonus
 
+
+; String pour print 
+; ------------------------------
+win                  dc.b "===== YOU WIN =====",0
+lose                 dc.b "===== YOU LOSE =====",0
                 
 
 
