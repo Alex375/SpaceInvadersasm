@@ -1141,18 +1141,15 @@ PrintBonusInvader	movem.l d7/a1,-(a7)
 					rts
 				
 
-MoveBonusInvader; Décrémente la variable "skip",
-                ; et ne fait rien si elle n'est pas nulle.
-                subq.w #1,\skip
+MoveBonusInvader subq.w #1,\skip
                 bne \quit
-                ; Réinitialise "skip" à sa valeur maximale
+
                 move.w BonusSpeed,\skip
 				add.w #1,\skip
-                ; Appel de MoveAllInvaders.
+
                 jsr ActMoveBonus
-\quit           ; Sortie du sous programme.
-                rts
-                ; Compteur d'affichage des envahisseurs
+\quit         	rts
+
 \skip           dc.w 1
 					
 					
@@ -1178,21 +1175,16 @@ ActMoveBonus		movem.l d1/d2/a1/d7,-(a7)
 					rts
 
 DestroyBonusInvader	movem.l d7/a1/a2,-(a7)
-                    ; Fait pointer A1.L sur les envahisseurs.
-                    ; Fait pointer A2.L sur le tir du vaisseau.
+
                     lea BonusInvader,a1
                     lea ShipShot,a2
-                    ; Nombre d'itérations – 1 (car DBRA) -> D7.W
                     move.w #INVADER_COUNT-1,d7
 
-					; Si le tir n'entre pas en collision
-                    ; avec l'envahisseur, on passe au suivant.
+
                     jsr IsSpriteColliding
                     bne \quit
 
-\colliding          ; S'il y a une collision,
-                    ; on efface le tir et l'envahisseur.
-                    ; Puis on décrémente le nombre d'envahisseurs.
+\colliding          
                     move.w #HIDE,STATE(a1)
                     move.w #HIDE,STATE(a2)
 					move.w #-BONUS_GAIN,BonusStepReal
@@ -1202,17 +1194,17 @@ DestroyBonusInvader	movem.l d7/a1/a2,-(a7)
                     rts
 
 SpawnBonus			movem.l a1/d0,-(a7)
-					lea BonusInvader,a1
-					move.w InvaderCount,d0
+					lea 	BonusInvader,a1
+					move.w 	InvaderCount,d0
                     cmpi.w  #BONUS_POP,d0
-                    bgt \continue
+                    bgt 	\continue
                     cmpi.w	#0,BonusShowed
-                    bne \continue
-                    move.w #SHOW,STATE(a1)
-                    addq.w #1,BonusShowed
+                    bne 	\continue
+                    move.w  #SHOW,STATE(a1)
+                    addq.w  #1,BonusShowed
 \continue           cmpi.w	#BONUS_STOP,d0
-                    bgt \quit
-                    clr.w BonusStepReal
+                    bgt 	\quit
+                    clr.w 	BonusStepReal
 \quit				movem.l (a7)+,a1/d0
 					rts
                     
@@ -1250,9 +1242,9 @@ Main                jsr     InitInvaders
 					bne		\loop
 					
                     lea     win,a0
-                    cmp.l    #SHIP_WIN,d0
-                    beq        \print
-                    lea        lose,a0
+                    cmp.l   #SHIP_WIN,d0
+                    beq     \print
+                    lea     lose,a0
             
 
 \print              move.b #20,d1
